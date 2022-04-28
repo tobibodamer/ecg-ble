@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="EcgBLEApp.Views.EcgView"
+             xmlns:vm="clr-namespace:EcgBLEApp.ViewModels"
+             xmlns:converters="clr-namespace:EcgBLEApp.Converters"
+             xmlns:skia="clr-namespace:SkiaSharp.Views.Forms;assembly=SkiaSharp.Views.Forms"
+             Title="{Binding Title}">
+
+    <ContentPage.BindingContext>
+        <vm:EcgViewModel />
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Color x:Key="Accent">#96d1ff</Color>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <!--<StackLayout BackgroundColor="{StaticResource Accent}" VerticalOptions="FillAndExpand" HorizontalOptions="Fill">
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" VerticalOptions="Center">
+                <ContentView Padding="0,40,0,40" VerticalOptions="FillAndExpand">
+                    <Image Source="xamarin_logo.png" VerticalOptions="Center" HeightRequest="64" />
+                </ContentView>
+            </StackLayout>
+        </StackLayout>-->
+        <ScrollView Grid.Row="1">
+            <StackLayout Orientation="Vertical" Padding="30,24,30,24" Spacing="10">
+                <Label Text="Scan for BLE devices" FontSize="Title"/>
+                <StackLayout Orientation="Vertical" Spacing="10"
+                    IsVisible="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"    >                
+                    <Button>
+                        <Button.Style>
+                            <Style TargetType="{x:Type Button}">
+                                <Setter Property="Text" Value="Start Scanning"/>
+                                <Setter Property="Command" Value="{Binding StartScanningCommand}"/>
+                                <Style.Triggers>
+                                    <DataTrigger TargetType="{x:Type Button}" Binding="{Binding IsScanning}" Value="True">
+                                        <Setter Property="Text" Value="Stop Scanning"/>
+                                        <Setter Property="Command" Value="{Binding StopScanningCommand}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <ListView 
+                        x:Name="DevicesListView"
+                        ItemsSource="{Binding DiscoveredDevices}"                           
+                        BackgroundColor="LightGray">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <TextCell Text="{Binding Path=Name}" TextColor="DarkSlateGray"
+                                      Command="{Binding Path=BindingContext.ConnectToDeviceCommand, Source={x:Reference DevicesListView}}" 
+                                      CommandParameter="{Binding }"/>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackLayout>
+
+                <StackLayout Orientation="Vertical" Spacing="10">
+                    <!--IsVisible="{Binding IsConnected}">-->
+                    <Label Text="{Binding ConnectedDevice, StringFormat='Connected to {0}'}" />
+
+                    <Button Text="Disconnect" BackgroundColor="OrangeRed"
+                        Command="{Binding DisconnectCommand}"/>
+
+                    <Label Text="{Binding Value}" TextColor="Black"/>
+
+                    <!--<lvc:CartesianChart x:Name="chart" Series="{Binding Series}" HeightRequest="200"/>-->
+
+                    <skia:SKCanvasView x:Name="canvasView"
+                           Grid.Row="2" HeightRequest="300"
+                           PaintSurface="OnCanvasViewPaintSurface" />
+
+                    <StackLayout Orientation="Horizontal" Spacing="10">
+                        <Entry Text="{Binding PollingRate}" WidthRequest="50"/>
+                        <Button Text="Apply" Command="{Binding UpdatePollingRateCommand}"/>
+                    </StackLayout>
+                </StackLayout>
+            </StackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>
