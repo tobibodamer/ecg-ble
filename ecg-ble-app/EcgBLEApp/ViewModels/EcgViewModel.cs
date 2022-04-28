@@ -120,40 +120,17 @@ namespace EcgBLEApp.ViewModels
             PollingRate = (int)BitConverter.ToUInt16(e.Characteristic.Value);
         }
 
-        const int SEND_BUFFER_SIZE = 20;
-        const int PACKET_SIZE = 5;
-        private readonly static int PacketsPerMessage = SEND_BUFFER_SIZE / PACKET_SIZE;
-        private readonly static int ValuesPerMessage = PacketsPerMessage * 4;
 
-        private static void ParseValues(byte[] arr, ushort[] destArray, int index)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                int offset = i * PACKET_SIZE;
-
-                uint a = (arr[offset + 0] & 0b11111111u) << 2 | ((arr[offset + 1] & 0b11000000u) >> (8 - 2));
-                uint b = (arr[offset + 1] & 0b00111111u) << 4 | ((arr[offset + 2] & 0b11110000u) >> (8 - 4));
-                uint c = (arr[offset + 2] & 0b00001111u) << 6 | ((arr[offset + 3] & 0b11111100u) >> (8 - 6));
-                uint d = (arr[offset + 3] & 0b00000011u) << 8 | ((arr[offset + 4] & 0b11111111u) >> (8 - 8));
-
-                destArray[index++] = (ushort)a;
-                destArray[index++] = (ushort)b;
-                destArray[index++] = (ushort)c;
-                destArray[index++] = (ushort)d;
-            }
-        }
-
-
-        private readonly ushort[] _buffer = new ushort[PacketsPerMessage * 4];
+        private readonly ushort[] _buffer = new ushort[ble.ValuesPerMessage];
         private void SignalChar_ValueUpdated(object sender, Plugin.BLE.Abstractions.EventArgs.CharacteristicUpdatedEventArgs e)
         {
             Value = BitConverter.ToString(e.Characteristic.Value);
 
             byte[] arr = e.Characteristic.Value;
 
-            ParseValues(arr, _buffer, 0);
+            ble.ParseValues(arr, _buffer, 0);
 
-            for (int i = 0; i < ValuesPerMessage; i++)
+            for (int i = 0; i < ble.ValuesPerMessage; i++)
             {
                 Values.Add(_buffer[i]);
             }
@@ -163,9 +140,9 @@ namespace EcgBLEApp.ViewModels
         {
             Value = BitConverter.ToString(arr);
 
-            ParseValues(arr, _buffer, 0);
+            ble.ParseValues(arr, _buffer, 0);
 
-            for (int i = 0; i < ValuesPerMessage; i++)
+            for (int i = 0; i < ble.ValuesPerMessage; i++)
             {
                 Values.Add(_buffer[i]);
             }
