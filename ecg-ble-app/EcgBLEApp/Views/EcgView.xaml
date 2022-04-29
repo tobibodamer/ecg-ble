@@ -4,7 +4,7 @@
              x:Class="EcgBLEApp.Views.EcgView"
              xmlns:vm="clr-namespace:EcgBLEApp.ViewModels"
              xmlns:converters="clr-namespace:EcgBLEApp.Converters"
-             xmlns:skia="clr-namespace:SkiaSharp.Views.Forms;assembly=SkiaSharp.Views.Forms"
+             xmlns:views="clr-namespace:EcgBLEApp.Views"
              Title="{Binding Title}">
 
     <ContentPage.BindingContext>
@@ -34,7 +34,7 @@
             <StackLayout Orientation="Vertical" Padding="30,24,30,24" Spacing="10">
                 <Label Text="Scan for BLE devices" FontSize="Title"/>
                 <StackLayout Orientation="Vertical" Spacing="10"
-                    IsVisible="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"    >                
+                    IsVisible="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"    >
                     <Button>
                         <Button.Style>
                             <Style TargetType="{x:Type Button}">
@@ -64,8 +64,8 @@
                     </ListView>
                 </StackLayout>
 
-                <StackLayout Orientation="Vertical" Spacing="10">
-                    <!--IsVisible="{Binding IsConnected}">-->
+                <StackLayout Orientation="Vertical" Spacing="10"
+                    IsVisible="{Binding IsConnected}">
                     <Label Text="{Binding ConnectedDevice, StringFormat='Connected to {0}'}" />
 
                     <Button Text="Disconnect" BackgroundColor="OrangeRed"
@@ -73,11 +73,13 @@
 
                     <Label Text="{Binding Value}" TextColor="Black"/>
 
-                    <!--<lvc:CartesianChart x:Name="chart" Series="{Binding Series}" HeightRequest="200"/>-->
-
-                    <skia:SKCanvasView x:Name="canvasView"
-                           Grid.Row="2" HeightRequest="300"
-                           PaintSurface="OnCanvasViewPaintSurface" />
+                    <views:ChartControl x:Name="ChartControl" Values="{Binding FilteredValues}" 
+                                        GridColor="#de453a" ShowGrid="True"
+                                        MinY="0" MaxY="1023" SizeMode="FitToWidth"
+                                        MaxX="3000"
+                                        ZeroPoint="0,512"
+                                        TimeMode="Reset"
+                                        HeightRequest="300"/>
 
                     <StackLayout Orientation="Horizontal" Spacing="10">
                         <Entry Text="{Binding PollingRate}" WidthRequest="50"/>

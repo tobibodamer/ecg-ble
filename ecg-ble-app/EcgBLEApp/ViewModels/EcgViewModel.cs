@@ -1,4 +1,5 @@
-﻿using Plugin.BLE;
+﻿using EcgBLEApp.Filtering;
+using Plugin.BLE;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.Permissions;
 using Plugin.Permissions.Abstractions;
@@ -80,14 +81,12 @@ namespace EcgBLEApp.ViewModels
                     var signalChar = await service.GetCharacteristicAsync(ble.ECG_SIGNAL_CHAR_UUID);
                     var pollingRateChar = await service.GetCharacteristicAsync(ble.POLLING_RATE_CHAR_UUID);
 
+                    pollingRateChar.ValueUpdated += PollingRateChar_ValueUpdated;
+                    PollingRate = BitConverter.ToUInt16(await pollingRateChar.ReadAsync());
+                    PollingRateChar = pollingRateChar;
+
                     signalChar.ValueUpdated += SignalChar_ValueUpdated;
                     await signalChar.StartUpdatesAsync();
-
-                    pollingRateChar.ValueUpdated += PollingRateChar_ValueUpdated;
-
-                    PollingRate = BitConverter.ToUInt16(await pollingRateChar.ReadAsync());
-
-                    PollingRateChar = pollingRateChar;
                 }
                 catch
                 {
@@ -101,6 +100,7 @@ namespace EcgBLEApp.ViewModels
                 ConnectedDevice = null;
                 OnPropertyChanged(nameof(IsConnected));
                 Values.Clear();
+                FilteredValues.Clear();
             });
 
             UpdatePollingRateCommand = new Command(async () =>
@@ -109,7 +109,7 @@ namespace EcgBLEApp.ViewModels
                 {
                     await PollingRateChar.WriteAsync(BitConverter.GetBytes((ushort)PollingRate));
                 }
-            }); 
+            });
 
             _simulator.NewMessage += Simulator_NewMessage;
             //_simulator.Start();
@@ -120,7 +120,7 @@ namespace EcgBLEApp.ViewModels
             PollingRate = (int)BitConverter.ToUInt16(e.Characteristic.Value);
         }
 
-
+        private LowpassFilterButterworthImplementation _filter;
         private readonly ushort[] _buffer = new ushort[ble.ValuesPerMessage];
         private void SignalChar_ValueUpdated(object sender, Plugin.BLE.Abstractions.EventArgs.CharacteristicUpdatedEventArgs e)
         {
@@ -132,7 +132,9 @@ namespace EcgBLEApp.ViewModels
 
             for (int i = 0; i < ble.ValuesPerMessage; i++)
             {
-                Values.Add(_buffer[i]);
+                var value = _buffer[i];
+                Values.Add(value);
+                FilteredValues.Add((float)_filter.compute(value));
             }
         }
 
@@ -196,8 +198,14 @@ namespace EcgBLEApp.ViewModels
             set
             {
                 _pollingRate = value;
+                OnPollingRateChanged();
                 OnPropertyChanged();
             }
+        }
+
+        private void OnPollingRateChanged()
+        {
+            _filter = new LowpassFilterButterworthImplementation(40, 1, PollingRate);
         }
 
         public bool IsConnected => ConnectedDevice != null;
@@ -217,5 +225,7 @@ namespace EcgBLEApp.ViewModels
         }
 
         public ObservableCollection<int> Values { get; } = new ObservableCollection<int>();
+
+        public ObservableCollection<float> FilteredValues { get; } = new ObservableCollection<float>();
     }
 }

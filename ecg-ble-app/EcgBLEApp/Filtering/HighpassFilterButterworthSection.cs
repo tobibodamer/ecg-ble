@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EcgBLEApp.Views
+namespace EcgBLEApp.Filtering
 {
     public class HighpassFilterButterworthSection
     {

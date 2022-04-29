@@ -1,4 +1,4 @@
-﻿namespace EcgBLEApp.Views
+﻿namespace EcgBLEApp.Filtering
 {
     public class IIRFilterImplementation
     {
