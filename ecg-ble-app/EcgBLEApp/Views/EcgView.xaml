@@ -76,7 +76,7 @@
                     <views:ChartControl x:Name="ChartControl" Values="{Binding FilteredValues}" 
                                         GridColor="#de453a" ShowGrid="True"
                                         MinY="0" MaxY="1023" SizeMode="FitToWidth"
-                                        MaxX="3000"
+                                        MaxX="2400"
                                         ZeroPoint="0,512"
                                         TimeMode="Reset"
                                         HeightRequest="300"/>
