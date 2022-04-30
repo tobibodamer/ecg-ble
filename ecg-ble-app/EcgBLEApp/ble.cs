@@ -10,7 +10,7 @@ using Plugin.BLE.Abstractions.EventArgs;
 
 namespace EcgBLEApp.ViewModels
 {
-    internal class ble
+    internal class BLE
     {
         private static IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
 
@@ -33,120 +33,99 @@ namespace EcgBLEApp.ViewModels
         /// <summary>
         /// Number of values per message.
         /// </summary>
-        public static readonly int ValuesPerMessage = PacketsPerMessage * 4;
+        public static readonly int SamplesPerMessage = PacketsPerMessage * 4;
 
-        public static IDevice CurrentDevice { get; private set; }
-        private static IService EcgService { get; set; }
+        public IDevice CurrentDevice { get; private set; }
+        private IService EcgService { get; set; }
 
-        static ble()
+        public ICharacteristic PollingRateCharacteristic { get; private set; }
+        public ICharacteristic SignalCharacteristic { get; private set; }
+
+        private static readonly BLE _instance = new BLE();
+        public static BLE Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+
+        public BLE()
         {
             Adapter.DeviceDisconnected += Adapter_DeviceDisconnected;
             Adapter.DeviceConnectionLost += Adapter_DeviceConnectionLost;
         }
 
-        private static void Adapter_DeviceConnectionLost(object sender, Plugin.BLE.Abstractions.EventArgs.DeviceErrorEventArgs e)
+        private void Adapter_DeviceConnectionLost(object sender, Plugin.BLE.Abstractions.EventArgs.DeviceErrorEventArgs e)
         {
             if (CurrentDevice?.Id == e.Device.Id)
             {
                 CurrentDevice = null;
-                CurrentDeviceDisconnected?.Invoke(null, EventArgs.Empty);
-                SignalStreams.Clear();
+                CurrentDeviceDisconnected?.Invoke();
             }
         }
 
-        private static void Adapter_DeviceDisconnected(object sender, Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
+        private void Adapter_DeviceDisconnected(object sender, Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
         {
             if (CurrentDevice?.Id == e.Device.Id)
             {
                 CurrentDevice = null;
-                CurrentDeviceDisconnected?.Invoke(null, EventArgs.Empty);
-                foreach (var stream in SignalStreams.Values)
-                {
-                    stream.Dispose();
-                }
-                SignalStreams.Clear();
+                CurrentDeviceDisconnected?.Invoke();
             }
         }
 
-        public async static Task ConnectToDevice(IDevice device)
+        public async Task ConnectToDevice(IDevice device)
         {
             await Adapter.ConnectToDeviceAsync(device);
 
             CurrentDevice = device;
             EcgService = await CurrentDevice.GetServiceAsync(ECG_SERVICE_UUID);
+            PollingRateCharacteristic = await EcgService.GetCharacteristicAsync(POLLING_RATE_CHAR_UUID);
+            SignalCharacteristic = await EcgService.GetCharacteristicAsync(ECG_SIGNAL_CHAR_UUID);
+
+            PollingRateCharacteristic.ValueUpdated += PollingRateCharacteristic_ValueUpdated;
         }
 
-        public static event EventHandler CurrentDeviceDisconnected;
-
-        private static readonly Dictionary<Guid, MemoryStream> SignalStreams = new Dictionary<Guid, MemoryStream>();
-        public async static Task<Stream> GetData()
+        private void PollingRateCharacteristic_ValueUpdated(object sender, CharacteristicUpdatedEventArgs e)
         {
-            if (CurrentDevice == null)
+            PollingRateChanged?.Invoke(BitConverter.ToUInt16(e.Characteristic.Value));
+        }
+
+        public event Action CurrentDeviceDisconnected;
+
+        public event Action<ushort> PollingRateChanged;
+
+
+        public async Task<ushort> GetPollingRate()
+        {
+            if (PollingRateCharacteristic == null)
             {
                 throw new InvalidOperationException("No device connected.");
             }
 
-            var stream = new MemoryStream();
-            Guid id = Guid.NewGuid();
-
-            SignalStreams.Add(id, stream);
-
-            if (SignalStreams.Count == 1)
-            {
-                
-                var signalChar = await EcgService.GetCharacteristicAsync(ECG_SIGNAL_CHAR_UUID);
-                
-                signalChar.ValueUpdated += SignalChar_ValueUpdated;
-                await signalChar.StartUpdatesAsync();
-            }
-
-            return stream;
-        }
-
-        private static async void SignalChar_ValueUpdated(object sender, CharacteristicUpdatedEventArgs e)
-        {
-            var value = e.Characteristic.Value;
-
-            List<Guid> toRemove = new List<Guid>();
-
-            foreach (var (id, stream) in SignalStreams)
-            {
-                try
-                {
-                    await stream.WriteAsync(value, 0, value.Length);
-                }
-                catch (ObjectDisposedException)
-                {
-                    toRemove.Add(id);
-                }
-            }
-
-            toRemove.ForEach(id => SignalStreams.Remove(id));
-        }
-
-        public static async Task<ushort> GetPollingRate()
-        {
-            if (CurrentDevice == null)
-            {
-                throw new InvalidOperationException("No device connected.");
-            }
-
-            var pollingRateChar = await EcgService.GetCharacteristicAsync(POLLING_RATE_CHAR_UUID);
-
-            var pollingRateBytes = await pollingRateChar.ReadAsync();
+            var pollingRateBytes = await PollingRateCharacteristic.ReadAsync();
 
             return BitConverter.ToUInt16(pollingRateBytes);
         }
 
+        public async Task<bool> SetPollingRate(ushort pollingRate)
+        {
+            if (PollingRateCharacteristic?.CanWrite == true)
+            {
+                return await PollingRateCharacteristic.WriteAsync(BitConverter.GetBytes(pollingRate));
+            }
+
+            return false;
+        }
 
 
         /// <summary>
         /// Unpacks 10 bit values packed to 8 bit array from the received message buffer.
         /// </summary>
         /// <param name="arr">The received message buffer. (Must have a length of <see cref="SEND_BUFFER_SIZE"/>)</param>
-        /// <param name="destArray">The destination array. (Must have a length of <see cref="ValuesPerMessage"/> + <paramref name="index"/>)</param>
+        /// <param name="destArray">The destination array. (Must have a length of <see cref="SamplesPerMessage"/> + <paramref name="index"/>)</param>
         /// <param name="index">The starting index in the destination array.</param>
-        public static void ParseValues(byte[] arr, ushort[] destArray, int index)
+        public static void UnpackSamplesFromMessage(byte[] arr, ushort[] destArray, int index)
         {
             for (int i = 0; i < 4; i++)
             {

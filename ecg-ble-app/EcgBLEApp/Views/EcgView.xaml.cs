@@ -21,7 +21,6 @@ namespace EcgBLEApp.Views
         public EcgView()
         {
             InitializeComponent();
-            BindingContext = new EcgViewModel();
         }
 
         public EcgViewModel ViewModel => BindingContext as EcgViewModel;
@@ -32,7 +31,7 @@ namespace EcgBLEApp.Views
 
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
-            ChartControl.YScale = 50 / 170.6666f;
+            ChartControl.YScale = 70 / 0.5f; // 70px / 0.5mV
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -45,10 +44,14 @@ namespace EcgBLEApp.Views
 
         private void UpdateSizing()
         {
-            ChartControl.GridSize = new Size(170.6666f, ViewModel.PollingRate * 0.2f);
-            ChartControl.FineGridSize = new Size(170.6666f / 5.0f, ViewModel.PollingRate * 0.04f);
-            ChartControl.XScale = 350.0f / ViewModel.PollingRate; // 350px/s
-            ChartControl.YScale = 50 / 170.6666f;
+            // 0.5mv x 0.2s
+            ChartControl.GridSize = new Size(ViewModel.PollingRate * 0.2f, 0.5f);
+
+            // 0.1mv x 40ms
+            ChartControl.FineGridSize = new Size(ViewModel.PollingRate * 0.04f, 0.1f);
+
+            ChartControl.XScale = 70 / (ViewModel.PollingRate * 0.2f); // 70px / 0.2s
+            ChartControl.YScale = 70 / 0.5f; // 70px / 0.5mV
         }
 
         public static double[] Butterworth(double[] indata, double Samplingrate, double CutOff)

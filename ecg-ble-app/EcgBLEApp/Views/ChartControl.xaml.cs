@@ -326,7 +326,7 @@ namespace EcgBLEApp.Views
                 : 0;
 
             float yOffset = GridAlignment.HasFlag(AlignGrid.YAxis)
-                ? height - Math.Abs(((MinY + (float)ZeroPoint.Y) % height))
+                ? Math.Abs(((MinY + (float)ZeroPoint.Y) % height))
                 : 0;
 
             for (float x = MinX + xOffset; x < MaxX; x += width)
@@ -447,47 +447,53 @@ namespace EcgBLEApp.Views
 
                 //canvas.DrawPath(curve, paint);
 
-
-                for (int x = x0; x < xEnd - 1; x++)
+                try
                 {
-                    int x1 = x;
-                    int x2 = x + 1;
-
-                    float y1 = Values[x1];
-                    float y2 = Values[x2];
-
-                    if ((y1 > MaxY && y2 > MaxY) ||
-                        (y1 < MinY && y2 < MinY))
+                    for (int x = x0; x < xEnd - 1; x++)
                     {
-                        continue;
-                    }
+                        int x1 = x;
+                        int x2 = x + 1;
 
-                    var c1 = ChartToDevice(new SKPoint(x1, y1));
-                    var c2 = ChartToDevice(new SKPoint(x2, y2));
+                        float y1 = Values[x1];
+                        float y2 = Values[x2];
 
-                    // Fade out
-                    if (TimeMode == TimeModes.Reset)
-                    {
-                        int age = (numberOfValues - 1) - x;
-
-                        if (age > FadeOutStart)
+                        if ((y1 > MaxY && y2 > MaxY) ||
+                            (y1 < MinY && y2 < MinY))
                         {
-                            float fadeOutFactor = CalculateFadeOutFactor(age);
-                            float fadeOutFactor2 = CalculateFadeOutFactor(age - 1);
+                            continue;
+                        }
 
-                            paint.Shader = SKShader.CreateLinearGradient(
-                                    c1,
-                                    c2,
-                                    new SKColor[] {
+                        var c1 = ChartToDevice(new SKPoint(x1, y1));
+                        var c2 = ChartToDevice(new SKPoint(x2, y2));
+
+                        // Fade out
+                        if (TimeMode == TimeModes.Reset)
+                        {
+                            int age = (numberOfValues - 1) - x;
+
+                            if (age > FadeOutStart)
+                            {
+                                float fadeOutFactor = CalculateFadeOutFactor(age);
+                                float fadeOutFactor2 = CalculateFadeOutFactor(age - 1);
+
+                                paint.Shader = SKShader.CreateLinearGradient(
+                                        c1,
+                                        c2,
+                                        new SKColor[] {
                                         paint.Color.WithAlpha((byte)Map(fadeOutFactor, 0, 1, 255, 0)),
                                         paint.Color.WithAlpha((byte)Map(fadeOutFactor2, 0, 1, 255, 0)) },
-                                    SKShaderTileMode.Clamp);
+                                        SKShaderTileMode.Clamp);
 
-                            //paint.Color = paint.Color.WithAlpha((byte)Map(fadeOutFactor, 0, 1, 255, 0));
+                                //paint.Color = paint.Color.WithAlpha((byte)Map(fadeOutFactor, 0, 1, 255, 0));
+                            }
                         }
-                    }
 
-                    canvas.DrawLine(c1, c2, paint);
+                        canvas.DrawLine(c1, c2, paint);
+                    }
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // Collection was probably modified
                 }
             }
         }

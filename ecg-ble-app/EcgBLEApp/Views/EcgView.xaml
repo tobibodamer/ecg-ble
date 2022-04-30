@@ -71,13 +71,15 @@
                     <Button Text="Disconnect" BackgroundColor="OrangeRed"
                         Command="{Binding DisconnectCommand}"/>
 
-                    <Label Text="{Binding Value}" TextColor="Black"/>
+                    <!--<Label Text="{Binding Value}" TextColor="Black"/>-->
+
+                    <Label Text="{Binding HR, StringFormat='{0} bpm'}" FontSize="20" HorizontalOptions="End"/>
 
                     <views:ChartControl x:Name="ChartControl" Values="{Binding FilteredValues}" 
-                                        GridColor="#de453a" ShowGrid="True"
-                                        MinY="0" MaxY="1023" SizeMode="FitToWidth"
+                                        GridColor="#e0816e" ShowGrid="True"
+                                        MinY="-3" MaxY="3" SizeMode="FitToWidth"
                                         MaxX="2400"
-                                        ZeroPoint="0,512"
+                                        ZeroPoint="0,0"
                                         TimeMode="Reset"
                                         HeightRequest="300"/>
 
