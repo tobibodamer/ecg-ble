@@ -75,12 +75,13 @@
 
                     <Label Text="{Binding HR, StringFormat='{0} bpm'}" FontSize="20" HorizontalOptions="End"/>
 
-                    <views:ChartControl x:Name="ChartControl" Values="{Binding FilteredValues}" 
-                                        GridColor="#e0816e" ShowGrid="True"
+                    <views:ChartControl x:Name="ChartControl" Values="{Binding Values}" 
+                                        GridColor="#e0816e" ShowGrid="True" GridAlignment="BothAxis"
                                         MinY="-3" MaxY="3" SizeMode="FitToWidth"
                                         MaxX="2400"
                                         ZeroPoint="0,0"
-                                        TimeMode="Reset"
+                                        TimeMode="Reset" StopTrackingOnDrag="False" StopTrackingOnZoom="False"
+                                        ZoomMode="Both" MaxZoom="0.05"
                                         HeightRequest="300"/>
 
                     <StackLayout Orientation="Horizontal" Spacing="10">

@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 
@@ -24,7 +23,12 @@ namespace EcgBLEApp.Views
             {
                 _ = AnimationLoop();
             }
+
+            canvasView.EnableTouchEvents = true;
+            canvasView.Touch += CanvasView_Touch;
         }
+
+
 
         protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
@@ -38,8 +42,6 @@ namespace EcgBLEApp.Views
                 }
             }
         }
-
-
 
         public IList<float> Values
         {
@@ -58,7 +60,7 @@ namespace EcgBLEApp.Views
         }
 
         public static readonly BindableProperty FramesPerSecondProperty =
-            BindableProperty.Create("FramesPerSecond", typeof(double), typeof(ChartControl), 90.0);
+            BindableProperty.Create("FramesPerSecond", typeof(double), typeof(ChartControl), 60.0);
 
 
         private int _lastValueCount;
@@ -96,8 +98,8 @@ namespace EcgBLEApp.Views
                             break;
                     }
 
-                    _lastValueCount = Values.Count;
                 }
+                    _lastValueCount = Values.Count;
 
                 canvasView.InvalidateSurface();
 
@@ -314,6 +316,12 @@ namespace EcgBLEApp.Views
             return _chartToDeviceMatrix.MapPoint(point);
         }
 
+        private SKPoint DeviceToChart(SKPoint point)
+        {
+            return _deviceToChartMatrix.MapPoint(point);
+        }
+
+        private static float Mod(float k, float n) { return ((k %= n) < 0) ? k + n : k; }
         void DrawGrid(SKCanvas canvas, SKPaint paint, float height, float width)
         {
             if (width == 0 || height == 0)
@@ -322,11 +330,11 @@ namespace EcgBLEApp.Views
             }
 
             float xOffset = GridAlignment.HasFlag(AlignGrid.XAxis)
-                ? width - Math.Abs(((MinX + (float)ZeroPoint.X) % width))
+                ? width - Math.Abs(Mod((MinX + (float)ZeroPoint.X), width))
                 : 0;
 
             float yOffset = GridAlignment.HasFlag(AlignGrid.YAxis)
-                ? Math.Abs(((MinY + (float)ZeroPoint.Y) % height))
+                ? height - Math.Abs(Mod((MinY + (float)ZeroPoint.Y), height))
                 : 0;
 
             for (float x = MinX + xOffset; x < MaxX; x += width)
@@ -407,7 +415,7 @@ namespace EcgBLEApp.Views
                 paint.Color = SKColors.Black;
                 paint.StrokeWidth = 3;
 
-                int x0 = (int)Math.Floor(minX + xOffset);
+                int x0 = (int)Math.Max(Math.Floor(minX + xOffset), 0);
                 int xEnd = (int)Math.Min(Math.Ceiling(maxX), numberOfValues - 1);
 
                 if (x0 >= numberOfValues - 1)
@@ -503,6 +511,282 @@ namespace EcgBLEApp.Views
             float fadeOutAge = age - FadeOutStart;
 
             return Math.Min(1, fadeOutAge / FadeOutLength);
+        }
+
+        public float XAxisMinimum { get; set; } = 0;
+        public float XAxisMaximum { get; set; } = float.MaxValue;
+        public float YAxisMinimum { get; set; } = -6;
+        public float YAxisMaximum { get; set; } = 6;
+
+
+        public float MinZoom { get; set; } = float.PositiveInfinity; //2f;
+        public float MaxZoom { get; set; } = 0.08f;
+
+        public double ZoomThreshold { get; set; } = 0.005;
+
+        /// <summary>
+        /// Will set the <see cref="TimeMode"/> to <see cref="TimeModes.Pinned"/> if the user starts dragging.
+        /// </summary>
+        public bool StopTrackingOnDrag { get; set; } = false;
+
+        /// <summary>
+        /// Will set the <see cref="TimeMode"/> to <see cref="TimeModes.Pinned"/> if the user starts zooming.
+        /// </summary>
+        public bool StopTrackingOnZoom { get; set; } = false;
+
+        public enum ZoomPivot
+        {
+            Zero,
+            Center,
+        }
+
+        public enum ZoomModes
+        {
+            None,
+            X,
+            Y,
+            Both,
+            BothKeepAspectRatio
+        }
+
+        public ZoomModes ZoomMode { get; set; } = ZoomModes.Both;
+
+        // Touch information
+        private readonly Dictionary<long, SKPoint> _touchDictionary = new Dictionary<long, SKPoint>();
+        private SKPoint _initialScaleVec, _lastCenter;
+
+        private static SKPoint GetCenter(SKPoint p1, SKPoint p2)
+        {
+            return new SKPoint
+                (
+                    x: (p1.X + p2.X) / 2,
+                    y: (p1.Y + p2.Y) / 2
+                );
+        }
+        private void CanvasView_Touch(object sender, SKTouchEventArgs e)
+        {
+            float xOffset = -MinX * XScale + 0;
+            float yOffset = -MinY * -YScale + canvasView.CanvasSize.Height;
+
+            var chartToDeviceMatrix = SKMatrix.CreateScaleTranslation(XScale, -YScale, xOffset, yOffset);
+            chartToDeviceMatrix.TryInvert(out var deviceToChartMatrix);
+
+
+            switch (e.ActionType)
+            {
+                case SKTouchAction.Pressed:
+                    if (!_touchDictionary.ContainsKey(e.Id))
+                    {
+                        _touchDictionary.Add(e.Id, e.Location);
+
+                        if (_touchDictionary.Count == 2)
+                        {
+                            long[] keys = new long[2];
+                            _touchDictionary.Keys.CopyTo(keys, 0);
+
+                            // Find index of non-moving (pivot) finger
+                            int pivotIndex = (keys[0] == e.Id) ? 1 : 0;
+
+                            _initialScaleVec = e.Location - _touchDictionary[keys[pivotIndex]];
+                            _lastCenter = GetCenter(e.Location, _touchDictionary[keys[pivotIndex]]);
+                        }
+                    }
+                    break;
+                case SKTouchAction.Moved:
+                    if (_touchDictionary.ContainsKey(e.Id))
+                    {
+                        // Single-finger drag
+                        if (_touchDictionary.Count == 1)
+                        {
+                            if (StopTrackingOnDrag)
+                            {
+                                TimeMode = TimeModes.Pinned;
+                            }
+
+                            SKPoint point = deviceToChartMatrix.MapPoint(e.Location);
+                            SKPoint prevPoint = deviceToChartMatrix.MapPoint(_touchDictionary[e.Id]);
+
+                            var xDiff = point.X - prevPoint.X;
+                            var yDiff = point.Y - prevPoint.Y;
+
+                            if (MinX - xDiff >= XAxisMinimum && MaxX - xDiff <= XAxisMaximum)
+                            {
+                                MinX -= xDiff;
+                                MaxX -= xDiff;
+                            }
+
+                            if (MinY - yDiff >= YAxisMinimum && MaxY - yDiff <= YAxisMaximum)
+                            {
+                                MinY -= yDiff;
+                                MaxY -= yDiff;
+                            }
+
+                            canvasView.InvalidateSurface();
+                        }
+                        // Double-finger scale and drag
+                        else if (_touchDictionary.Count >= 2)
+                        {
+                            if (StopTrackingOnZoom)
+                            {
+                                TimeMode = TimeModes.Pinned;
+                            }
+
+                            // Copy two dictionary keys into array
+                            long[] keys = new long[_touchDictionary.Count];
+                            _touchDictionary.Keys.CopyTo(keys, 0);
+
+                            // Find index of non-moving (pivot) finger
+                            int pivotIndex = (keys[0] == e.Id) ? 1 : 0;
+
+                            // Get the three points involved in the transform
+                            SKPoint pivotPoint = _touchDictionary[keys[pivotIndex]];
+                            SKPoint prevPoint = _touchDictionary[e.Id];
+                            SKPoint newPoint = e.Location;
+
+                            SKPoint newCenter = GetCenter(newPoint, pivotPoint);
+
+
+                            // Calculate two vectors
+                            SKPoint oldVector = prevPoint - pivotPoint;
+                            SKPoint newVector = newPoint - pivotPoint;
+
+
+
+                            float scaleToInitialX = Math.Abs(newVector.X / _initialScaleVec.X);
+                            float scaleToInitialY = Math.Abs(newVector.Y / _initialScaleVec.Y);
+
+
+                            // Scaling factors are ratios of those
+                            float scaleX = 1;
+                            float scaleY = 1;
+
+                            var translation = deviceToChartMatrix.MapVector(_lastCenter - newCenter);
+                            SKMatrix translationMatrix = SKMatrix.Identity;
+
+                            switch (ZoomMode)
+                            {
+                                case ZoomModes.X:
+                                    scaleX = newVector.X / oldVector.X;
+                                    translationMatrix = SKMatrix.CreateTranslation(0, translation.Y);
+                                    break;
+                                case ZoomModes.Y:
+                                    scaleY = newVector.Y / oldVector.Y;
+                                    translationMatrix = SKMatrix.CreateTranslation(translation.X, 0);
+                                    break;
+                                case ZoomModes.Both:
+
+                                    scaleX = newVector.X / oldVector.X; //Map(Math.Max(0, 50 - Math.Abs(oldVector.X)), 50, 0, 1, newVector.X / oldVector.X);
+                                                                        //translationMatrix = SKMatrix.CreateTranslation(translation.X, 0);
+
+                                    scaleY = newVector.Y / oldVector.Y;
+                                    //translationMatrix = SKMatrix.CreateTranslation(translation.X, translation.Y);
+                                    break;
+                                case ZoomModes.BothKeepAspectRatio:
+                                    scaleX = scaleY = newVector.Length / oldVector.Length;
+                                    scaleToInitialX = scaleToInitialY = Math.Abs(newVector.Length / _initialScaleVec.Length);
+                                    break;
+                                case ZoomModes.None:
+                                default:
+                                    translationMatrix = SKMatrix.CreateTranslation(translation.X, translation.Y);
+                                    break;
+                            }
+
+                            // Constraint scale to Max / Min zoom levels
+
+                            if (scaleToInitialY <= MaxZoom || scaleToInitialY >= MinZoom || Math.Abs(1 - scaleY) < ZoomThreshold)
+                            {
+                                scaleY = 1;
+                            }
+                            else if (scaleToInitialY < 1)
+                            {
+                                scaleY = Map(scaleToInitialY, 1, MaxZoom, scaleY, 1);
+                                //scaleY += (1 - scaleToInitialY) * (1 - scaleY);
+                            }
+                            else if (scaleToInitialY > 1)
+                            {
+                                scaleY = Map(scaleToInitialY, 1, MinZoom, scaleY, 1);
+                            }
+
+                            if (scaleToInitialX <= MaxZoom || scaleToInitialX >= MinZoom || Math.Abs(1 - scaleX) < ZoomThreshold)
+                            {
+                                scaleX = 1;
+                            }
+                            else if (scaleToInitialX < 1)
+                            {
+                                scaleX = Map(scaleToInitialX, 1, MaxZoom, scaleX, 1);
+                            }
+                            else if (scaleToInitialX > 1)
+                            {
+                                scaleX = Map(scaleToInitialX, 1, MinZoom, scaleX, 1);
+                            }
+
+                            if (!float.IsNaN(scaleX) && !float.IsInfinity(scaleX) &&
+                                !float.IsNaN(scaleY) && !float.IsInfinity(scaleY) &&
+                                scaleX > 0 && scaleY > 0)
+                            {
+                                SKPoint mappedPivotPoint = deviceToChartMatrix.MapPoint(pivotPoint);
+
+                                // If something bad hasn't happened, calculate a scale and translation matrix
+                                SKMatrix scaleMatrix =
+                                    SKMatrix.CreateScale(1 / scaleX, 1 / scaleY, mappedPivotPoint.X, mappedPivotPoint.Y)
+                                            .PostConcat(translationMatrix);
+
+                                // Map min and max values
+
+                                var newMin = scaleMatrix.MapPoint(MinX, MinY);
+                                var newMax = scaleMatrix.MapPoint(MaxX, MaxY);
+
+                                bool xInRange = newMin.X >= XAxisMinimum && newMax.X <= XAxisMaximum;
+                                bool yInRange = newMin.Y >= YAxisMinimum && newMax.Y <= YAxisMaximum;
+
+
+                                if (xInRange && (ZoomMode != ZoomModes.BothKeepAspectRatio || yInRange))
+                                {
+                                    MinX = newMin.X;
+                                    MaxX = newMax.X;
+                                    XScale *= scaleX;
+                                }
+
+                                if (yInRange && (ZoomMode != ZoomModes.BothKeepAspectRatio || xInRange))
+                                {
+                                    MinY = newMin.Y;
+                                    MaxY = newMax.Y;
+                                    YScale *= scaleY;
+                                }
+                                Debug.WriteLine($"{scaleX}, {scaleY}");
+
+                                canvasView.InvalidateSurface();
+
+                                _lastCenter = newCenter;
+                            }
+                        }
+
+                        // Store the new point in the dictionary
+                        _touchDictionary[e.Id] = e.Location;
+                    }
+                    break;
+                case SKTouchAction.Released:
+                case SKTouchAction.Cancelled:
+                    if (_touchDictionary.ContainsKey(e.Id))
+                    {
+                        _touchDictionary.Remove(e.Id);
+                    }
+                    break;
+            }
+
+            // Let the OS know that we want to receive more touch events
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value">Value between 0 and 1.</param>
+        /// <param name="max"></param>
+        /// <returns></returns>
+        private static double LogMap(float value, float max)
+        {
+            return Math.Log(1 + value) / Math.Log(1 + max);
         }
 
         private static float Map(float s, float a1, float a2, float b1, float b2)

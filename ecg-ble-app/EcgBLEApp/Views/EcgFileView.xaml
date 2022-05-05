@@ -23,24 +23,25 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ScrollView Grid.Row="1">
+        <ScrollView Grid.Row="1" InputTransparent="True">
             <StackLayout Orientation="Vertical" Padding="30,24,30,24" Spacing="10">
-                <Label Text="View ECG files" FontSize="Title"/>
+            <Label Text="View ECG files" FontSize="Title"/>
 
-                <Button Text="Open..." BackgroundColor="Orchid"
+            <Button Text="Open..." BackgroundColor="Orchid"
                         Command="{Binding OpenFileCommand}"/>
 
-                <StackLayout Orientation="Vertical" Spacing="10" IsVisible="{Binding IsFileOpen}">
-                    <Label Text="{Binding FileName}"/>
-                    <views:ChartControl x:Name="ChartControl" Values="{Binding Values}" 
-                                        GridColor="#e0816e" ShowGrid="True"
+            <StackLayout Orientation="Vertical" Spacing="10" IsVisible="{Binding IsFileOpen}">
+                <Label Text="{Binding FileName}"/>
+                <views:ChartControl x:Name="ChartControl" Values="{Binding Values}" 
+                                        GridColor="#e0816e" ShowGrid="True" GridAlignment="BothAxis"
                                         MinY="-3" MaxY="3" SizeMode="FitToWidth"
                                         MaxX="2400"
                                         ZeroPoint="0,0"
-                                        TimeMode="Reset"
-                                        HeightRequest="300"/>                    
-                </StackLayout>
+                                        TimeMode="Scrolling" StopTrackingOnDrag="True" StopTrackingOnZoom="True"
+                                        ZoomMode="Both" MaxZoom="0.05"
+                                        HeightRequest="300"/>
             </StackLayout>
+        </StackLayout>
         </ScrollView>
     </Grid>
 

@@ -88,7 +88,7 @@ namespace EcgBLEApp.ViewModels
 
         private void PollingRateCharacteristic_ValueUpdated(object sender, CharacteristicUpdatedEventArgs e)
         {
-            PollingRateChanged?.Invoke(BitConverter.ToUInt16(e.Characteristic.Value));
+            PollingRateChanged?.Invoke(BitConverter.ToUInt16(e.Characteristic.Value, 0));
         }
 
         public event Action CurrentDeviceDisconnected;
@@ -105,7 +105,7 @@ namespace EcgBLEApp.ViewModels
 
             var pollingRateBytes = await PollingRateCharacteristic.ReadAsync();
 
-            return BitConverter.ToUInt16(pollingRateBytes);
+            return BitConverter.ToUInt16(pollingRateBytes, 0);
         }
 
         public async Task<bool> SetPollingRate(ushort pollingRate)

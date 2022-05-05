@@ -23,7 +23,7 @@ namespace EcgBLEApp.ViewModels
         public static string CreateFileName() => $"ECG_Recording_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.ecg";
         public static EcgFile OpenRead(string fileName, Stream fileStream = null)
         {
-            fileStream ??= File.OpenRead(fileName);
+            fileStream = fileStream ?? File.OpenRead(fileName);
             var reader = new BinaryReader(fileStream);
 
             EcgFile file = new EcgFile(fileName, reader: reader);
@@ -209,7 +209,7 @@ namespace EcgBLEApp.ViewModels
             _writer.BaseStream.Seek(0, SeekOrigin.End);
 
             Span<byte> bytes = MemoryMarshal.AsBytes(message.AsSpan());
-            _writer.Write(bytes);
+            _writer.Write(bytes.ToArray(), 0, bytes.Length);
         }
 
         public void Dispose()
