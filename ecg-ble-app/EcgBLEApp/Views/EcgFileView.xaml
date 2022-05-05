@@ -32,14 +32,18 @@
 
             <StackLayout Orientation="Vertical" Spacing="10" IsVisible="{Binding IsFileOpen}">
                 <Label Text="{Binding FileName}"/>
-                <views:ChartControl x:Name="ChartControl" Values="{Binding Values}" 
-                                        GridColor="#e0816e" ShowGrid="True" GridAlignment="BothAxis"
+                    <views:ChartControl x:Name="ChartControl" Values="{Binding Values}"
+                                        GridColor="#e0816e" ShowGrid="True" GridAlignment="YAxis"
                                         MinY="-3" MaxY="3" SizeMode="FitToWidth"
                                         MaxX="2400"
                                         ZeroPoint="0,0"
-                                        TimeMode="Scrolling" StopTrackingOnDrag="True" StopTrackingOnZoom="True"
-                                        ZoomMode="Both" MaxZoom="0.05"
-                                        HeightRequest="300"/>
+                                        TimeMode="Reset" StopTrackingOnDrag="True" StopTrackingOnZoom="True"
+                                        ZoomMode="BothKeepAspectRatio" MaxZoom="0.05"
+                                        HeightRequest="150">
+                        <views:ChartControl.YAxis>
+                            <views:Axis Minimum="-6" Maximum="6" MinRange="3" ForceRangeLimit="False" SizeLimitMode="FitOtherAxis"/>
+                        </views:ChartControl.YAxis>
+                    </views:ChartControl>
             </StackLayout>
         </StackLayout>
         </ScrollView>

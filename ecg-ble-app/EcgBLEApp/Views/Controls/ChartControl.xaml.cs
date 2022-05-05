@@ -43,6 +43,9 @@ namespace EcgBLEApp.Views
             }
         }
 
+        /// <summary>
+        /// The list of values Y values.
+        /// </summary>
         public IList<float> Values
         {
             get { return (IList<float>)GetValue(ValuesProperty); }
@@ -52,7 +55,9 @@ namespace EcgBLEApp.Views
         public static readonly BindableProperty ValuesProperty =
             BindableProperty.Create("Values", typeof(IList<float>), typeof(ChartControl));
 
-
+        /// <summary>
+        /// The refresh rate of the main animation loop.
+        /// </summary>
         public double FramesPerSecond
         {
             get { return (double)GetValue(FramesPerSecondProperty); }
@@ -90,7 +95,7 @@ namespace EcgBLEApp.Views
                             break;
                         case TimeModes.Reset:
                             _lastWindow = new SKRect(MinX, MinY, MaxX, MaxY);
-                            MaxX = Values.Count + RangeX;
+                            MaxX = Values.Count + XRange;
                             MinX = Values.Count;
                             break;
                         case TimeModes.Pinned:
@@ -99,7 +104,7 @@ namespace EcgBLEApp.Views
                     }
 
                 }
-                    _lastValueCount = Values.Count;
+                _lastValueCount = Values.Count;
 
                 canvasView.InvalidateSurface();
 
@@ -109,25 +114,42 @@ namespace EcgBLEApp.Views
             Debug.WriteLine("Animation loop ended.");
         }
 
-        [Flags]
         public enum SizeModes
         {
+            /// <summary>
+            /// Extends the displayed range to fit the width and height. <br></br>
+            /// Keeps the current aspect ratio and scale.
+            /// </summary>
+            Extend,
+
+            /// <summary>
+            /// Extends the displayed X range to fit the width, while keeping the current Y range. <br></br>
+            /// Keeps the current X scale.
+            /// </summary>
+            ExtendWidth,
+
+            /// <summary>
+            /// Extends the displayed Y range to fit the width, while keeping the current X range. <br></br>
+            /// Keeps the current Y scale.
+            /// </summary>
+            ExtendHeight,
+
             /// <summary>
             /// Fit the displayed range to the new height (fixed Y range on resize). <br></br>
             /// Keeps the current aspect ratio.
             /// </summary>
-            FitToHeight = 1,
+            FitToHeight,
 
             /// <summary>
             /// Fit the displayed range to the new width (fixed X range on resize). <br></br>
             /// Keeps the current aspect ratio.
             /// </summary>
-            FitToWidth = 2,
+            FitToWidth,
 
             /// <summary>
             /// Fit the displayed range to the new width and height (keep current X and Y range on resize).
             /// </summary>
-            FitToWidthAndHeight = FitToHeight | FitToWidth,
+            FitToWidthAndHeight,
 
         }
 
@@ -164,29 +186,79 @@ namespace EcgBLEApp.Views
         /// </summary>
         public SizeModes SizeMode { get; set; } = SizeModes.FitToHeight;
 
+        /// <summary>
+        /// Used to configure the X axis.
+        /// </summary>
+        public Axis XAxis { get; set; } = new Axis(minimum: 0, maximum: float.PositiveInfinity);
+
+        /// <summary>
+        /// Used to configure the Y axis.
+        /// </summary>
+        public Axis YAxis { get; set; } = new Axis();
+
+        /// <summary>
+        /// Gets or sets the current minimum X value.
+        /// </summary>
         public float MinX { get; set; } = 0;
+
+        /// <summary>
+        /// Gets or sets the current maximum X value.
+        /// </summary>
         public float MaxX { get; set; } = 200;
 
+        /// <summary>
+        /// Gets or sets the current minimum Y value.
+        /// </summary>
         public float MinY { get; set; } = 0;
+
+        /// <summary>
+        /// Gets or sets the current maximum Y value.
+        /// </summary>
         public float MaxY { get; set; } = 100;
 
+        /// <summary>
+        /// The scale of the X axis in pixel per value.
+        /// </summary>
         public float XScale { get; set; } = 1;
+
+        /// <summary>
+        /// The scale of the Y axis in pixel per value.
+        /// </summary>
         public float YScale { get; set; } = 1;
 
-        public float RangeX => Math.Abs(MaxX - MinX);
-        public float RangeY => Math.Abs(MaxY - MinY);
+        /// <summary>
+        /// The current range of the X axis.
+        /// </summary>
+        public float XRange => Math.Abs(MaxX - MinX);
 
+        /// <summary>
+        /// The current range of the Y axis.
+        /// </summary>
+        public float YRange => Math.Abs(MaxY - MinY);
+
+        /// <summary>
+        /// Calculated current aspect ratio.
+        /// </summary>
         public float AspectRatio => XScale / YScale;
 
-        public Point ZeroPoint { get; set; } = Point.Zero;
+        /// <summary>
+        /// Gets or sets the zero (reference) point. <br></br>
+        /// (e.g. for resizing and grid alignment)
+        /// </summary>
+        public Point ZeroPoint { get; set; }
 
-
+        /// <summary>
+        /// If set to true, when <see cref="TimeMode"/> is set to <see cref="TimeModes.Reset"/>, 
+        /// the previous window will be drawn after reset, until the new values override the old ones.
+        /// </summary>
         public bool DrawLastWindow { get; set; } = true;
 
-        public float FadeOutStart => RangeX * 0.8f;
-        public float FadeOutEnd => RangeX * 0.9f;
+        public float FadeOutStart => XRange * 0.8f;
+        public float FadeOutEnd => XRange * 0.9f;
         public float FadeOutLength => FadeOutEnd - FadeOutStart;
 
+
+        #region Grid
         public bool ShowGrid
         {
             get { return (bool)GetValue(ShowGridProperty); }
@@ -205,6 +277,15 @@ namespace EcgBLEApp.Views
 
         public static readonly BindableProperty GridColorProperty =
             BindableProperty.Create("GridColor", typeof(Color), typeof(ChartControl), Color.LightGray);
+
+        public Color FineGridColor
+        {
+            get { return (Color)GetValue(FineGridColorProperty); }
+            set { SetValue(FineGridColorProperty, value); }
+        }
+
+        public static readonly BindableProperty FineGridColorProperty =
+            BindableProperty.Create("FineGridColor", typeof(Color), typeof(ChartControl), Color.LightGray);
 
         public Size GridSize
         {
@@ -250,6 +331,8 @@ namespace EcgBLEApp.Views
             BothAxis = XAxis | YAxis,
         }
 
+        #endregion
+
         private SKRect _lastWindow = SKRect.Empty;
         private SKMatrix _chartToDeviceMatrix, _deviceToChartMatrix;
 
@@ -284,7 +367,6 @@ namespace EcgBLEApp.Views
 
         private void ConfigureScale(float height, float width)
         {
-            // NOTE: This function needs to be only called on resize
 
             float aspectRatio = AspectRatio;
 
@@ -293,12 +375,12 @@ namespace EcgBLEApp.Views
             switch (SizeMode)
             {
                 case SizeModes.FitToHeight:
-                    YScale = height / RangeY;
+                    YScale = height / YRange;
                     XScale = YScale * aspectRatio; // Adjust x scale
 
                     // Fit x range
                     float newXRange = (width / XScale);
-                    (MinX, MaxX) = GetNewRange(MinX, MaxX, (float)ZeroPoint.X, RangeX, newXRange);
+                    (MinX, MaxX) = GetNewRange(MinX, MaxX, (float)ZeroPoint.X, XRange, newXRange);
 
                     // Fit last window
                     (_lastWindow.Left, _lastWindow.Right) = GetNewRange(
@@ -306,20 +388,20 @@ namespace EcgBLEApp.Views
 
                     break;
                 case SizeModes.FitToWidth:
-                    XScale = width / RangeX;
+                    XScale = width / XRange;
                     YScale = XScale / aspectRatio;
 
                     // Fit y range
                     float newYRange = (height / YScale);
-                    (MinY, MaxY) = GetNewRange(MinY, MaxY, (float)ZeroPoint.Y, RangeY, newYRange);
+                    (MinY, MaxY) = GetNewRange(MinY, MaxY, (float)ZeroPoint.Y, YRange, newYRange);
 
                     // Fit last window
                     (_lastWindow.Top, _lastWindow.Bottom) = GetNewRange(
                         _lastWindow.Top, _lastWindow.Bottom, (float)ZeroPoint.Y, _lastWindow.Height, newYRange);
                     break;
                 case SizeModes.FitToWidthAndHeight:
-                    XScale = width / RangeX;
-                    YScale = height / RangeY;
+                    XScale = width / XRange;
+                    YScale = height / YRange;
                     break;
                 default:
                     // Dont change x and y scales
@@ -351,34 +433,8 @@ namespace EcgBLEApp.Views
             return _deviceToChartMatrix.MapPoint(point);
         }
 
-        private static float Mod(float k, float n) { return ((k %= n) < 0) ? k + n : k; }
-        void DrawGrid(SKCanvas canvas, SKPaint paint, float height, float width)
-        {
-            if (width == 0 || height == 0)
-            {
-                return;
-            }
 
-            float xOffset = GridAlignment.HasFlag(AlignGrid.XAxis)
-                ? width - Math.Abs(Mod((MinX + (float)ZeroPoint.X), width))
-                : 0;
-
-            float yOffset = GridAlignment.HasFlag(AlignGrid.YAxis)
-                ? height - Math.Abs(Mod((MinY + (float)ZeroPoint.Y), height))
-                : 0;
-
-            for (float x = MinX + xOffset; x < MaxX; x += width)
-            {
-                canvas.DrawLine(ChartToDevice(new SKPoint(x, MinY)), ChartToDevice(new SKPoint(x, MaxY)), paint);
-            }
-
-            for (float y = MinY + yOffset; y < MaxY; y += height)
-            {
-                canvas.DrawLine(ChartToDevice(new SKPoint(MinX, y)), ChartToDevice(new SKPoint(MaxX, y)), paint);
-            }
-        }
-
-        void OnCanvasViewPaintSurface(object sender, SKPaintSurfaceEventArgs args)
+        private void OnCanvasViewPaintSurface(object sender, SKPaintSurfaceEventArgs args)
         {
             SKImageInfo info = args.Info;
             SKSurface surface = args.Surface;
@@ -408,6 +464,7 @@ namespace EcgBLEApp.Views
                     DrawGrid(canvas, paint, (float)GridSize.Height, (float)GridSize.Width);
 
                     paint.StrokeWidth = 1;
+                    paint.Color = FineGridColor.ToSKColor();
 
                     // Draw fine grid
                     DrawGrid(canvas, paint, (float)FineGridSize.Height, (float)FineGridSize.Width);
@@ -426,6 +483,32 @@ namespace EcgBLEApp.Views
             }
         }
 
+
+        private void DrawGrid(SKCanvas canvas, SKPaint paint, float height, float width)
+        {
+            if (width == 0 || height == 0)
+            {
+                return;
+            }
+
+            float xOffset = GridAlignment.HasFlag(AlignGrid.XAxis)
+                ? width - Math.Abs(Mod((MinX + (float)ZeroPoint.X), width))
+                : 0;
+
+            float yOffset = GridAlignment.HasFlag(AlignGrid.YAxis)
+                ? height - Math.Abs(Mod((MinY + (float)ZeroPoint.Y), height))
+                : 0;
+
+            for (float x = MinX + xOffset; x < MaxX; x += width)
+            {
+                canvas.DrawLine(ChartToDevice(new SKPoint(x, MinY)), ChartToDevice(new SKPoint(x, MaxY)), paint);
+            }
+
+            for (float y = MinY + yOffset; y < MaxY; y += height)
+            {
+                canvas.DrawLine(ChartToDevice(new SKPoint(MinX, y)), ChartToDevice(new SKPoint(MaxX, y)), paint);
+            }
+        }
         private void DrawValues(float minX, float minY, float maxX, float maxY, int xOffset, SKPaintSurfaceEventArgs args)
         {
             if (Values.Count == 0)
@@ -543,11 +626,8 @@ namespace EcgBLEApp.Views
             return Math.Min(1, fadeOutAge / FadeOutLength);
         }
 
-        public float XAxisMinimum { get; set; } = 0;
-        public float XAxisMaximum { get; set; } = float.MaxValue;
-        public float YAxisMinimum { get; set; } = -6;
-        public float YAxisMaximum { get; set; } = 6;
 
+        #region Touch Manipulations
 
         public float MinZoom { get; set; } = float.PositiveInfinity; //2f;
         public float MaxZoom { get; set; } = 0.08f;
@@ -585,14 +665,6 @@ namespace EcgBLEApp.Views
         private readonly Dictionary<long, SKPoint> _touchDictionary = new Dictionary<long, SKPoint>();
         private SKPoint _initialScaleVec, _lastCenter;
 
-        private static SKPoint GetCenter(SKPoint p1, SKPoint p2)
-        {
-            return new SKPoint
-                (
-                    x: (p1.X + p2.X) / 2,
-                    y: (p1.Y + p2.Y) / 2
-                );
-        }
         private void CanvasView_Touch(object sender, SKTouchEventArgs e)
         {
             float xOffset = -MinX * XScale + 0;
@@ -639,13 +711,13 @@ namespace EcgBLEApp.Views
                             var xDiff = point.X - prevPoint.X;
                             var yDiff = point.Y - prevPoint.Y;
 
-                            if (MinX - xDiff >= XAxisMinimum && MaxX - xDiff <= XAxisMaximum)
+                            if (MinX - xDiff >= XAxis.Minimum && MaxX - xDiff <= XAxis.Maximum)
                             {
                                 MinX -= xDiff;
                                 MaxX -= xDiff;
                             }
 
-                            if (MinY - yDiff >= YAxisMinimum && MaxY - yDiff <= YAxisMaximum)
+                            if (MinY - yDiff >= YAxis.Minimum && MaxY - yDiff <= YAxis.Maximum)
                             {
                                 MinY -= yDiff;
                                 MaxY -= yDiff;
@@ -762,28 +834,8 @@ namespace EcgBLEApp.Views
                                             .PostConcat(translationMatrix);
 
                                 // Map min and max values
+                                TransformRangeAndScale(scaleMatrix, scaleX, scaleY);
 
-                                var newMin = scaleMatrix.MapPoint(MinX, MinY);
-                                var newMax = scaleMatrix.MapPoint(MaxX, MaxY);
-
-                                bool xInRange = newMin.X >= XAxisMinimum && newMax.X <= XAxisMaximum;
-                                bool yInRange = newMin.Y >= YAxisMinimum && newMax.Y <= YAxisMaximum;
-
-
-                                if (xInRange && (ZoomMode != ZoomModes.BothKeepAspectRatio || yInRange))
-                                {
-                                    MinX = newMin.X;
-                                    MaxX = newMax.X;
-                                    XScale *= scaleX;
-                                }
-
-                                if (yInRange && (ZoomMode != ZoomModes.BothKeepAspectRatio || xInRange))
-                                {
-                                    MinY = newMin.Y;
-                                    MaxY = newMax.Y;
-                                    YScale *= scaleY;
-                                }
-                                Debug.WriteLine($"{scaleX}, {scaleY}");
 
                                 canvasView.InvalidateSurface();
 
@@ -808,6 +860,85 @@ namespace EcgBLEApp.Views
             e.Handled = true;
         }
 
+        private void TransformRangeAndScale(SKMatrix transformMatrix, float scaleX, float scaleY)
+        {
+            var newMin = transformMatrix.MapPoint(MinX, MinY);
+            var newMax = transformMatrix.MapPoint(MaxX, MaxY);
+            var newRange = newMax - newMin;
+
+            bool xCanFit = (newMin.X >= XAxis.Minimum || newMax.X <= XAxis.Maximum) && 
+                (XAxis.ForceRangeLimit 
+                    ? ((XAxis.MaxRange >= newRange.X || scaleX < 1) && (XAxis.MinRange <= newRange.X || scaleX > 1)) // check if in resize range limit, or if getting out of it
+                    : XAxis.MaximumRange >= newRange.X || scaleX < 1); // check absolute range limit, or if getting out of it
+
+            bool yCanFit = (newMin.Y >= YAxis.Minimum || newMax.Y <= YAxis.Maximum) && YAxis.MaximumRange >= newRange.Y &&
+                (YAxis.ForceRangeLimit
+                    ? ((YAxis.MaxRange >= newRange.Y || scaleY < 1) && (YAxis.MinRange <= newRange.Y || scaleY > 1)) // check resize range limit
+                    : YAxis.MaximumRange >= newRange.Y || scaleY < 1); // check absolute range limit
+
+
+            if (xCanFit && (yCanFit || ZoomMode != ZoomModes.BothKeepAspectRatio))
+            {
+                if (newMin.X >= XAxis.Minimum)
+                {
+                    if (newMax.X <= XAxis.Maximum)
+                    {
+                        // Completely in range -> adjust min and max
+                        MinX = newMin.X;
+                        MaxX = newMax.X;
+                    }
+                    else
+                    {
+                        // Max boundary hit -> adjust min
+                        MinX = MaxX - newRange.X;
+                    }
+                }
+                else
+                {
+                    // Min boundary hit -> adjust max
+                    MaxX = MinX + newRange.X;
+                }
+
+                XScale *= scaleX;
+            }
+
+            if (yCanFit && (xCanFit || ZoomMode != ZoomModes.BothKeepAspectRatio))
+            {
+                if (newMin.Y >= YAxis.Minimum)
+                {
+                    if (newMax.Y <= YAxis.Maximum)
+                    {
+                        // Completely in range -> adjust min and max
+                        MinY = newMin.Y;
+                        MaxY = newMax.Y;
+                    }
+                    else
+                    {
+                        // Max boundary hit -> adjust min
+                        MinY = MaxY - newRange.Y;
+                    }
+                }
+                else
+                {
+                    // Min boundary hit -> adjust max
+                    MaxY = MinY + newRange.Y;
+                }
+
+                YScale *= scaleY;
+            }
+        }
+
+        #endregion
+
+        private static SKPoint GetCenter(SKPoint p1, SKPoint p2)
+        {
+            return new SKPoint
+                (
+                    x: (p1.X + p2.X) / 2,
+                    y: (p1.Y + p2.Y) / 2
+                );
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -823,5 +954,7 @@ namespace EcgBLEApp.Views
         {
             return b1 + (s - a1) * (b2 - b1) / (a2 - a1);
         }
+
+        private static float Mod(float k, float n) { return ((k %= n) < 0) ? k + n : k; }
     }
 }
