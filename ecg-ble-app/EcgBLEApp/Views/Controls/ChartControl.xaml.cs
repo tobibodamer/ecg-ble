@@ -112,25 +112,56 @@ namespace EcgBLEApp.Views
         [Flags]
         public enum SizeModes
         {
-            Scale = 0,
+            /// <summary>
+            /// Fit the displayed range to the new height (fixed Y range on resize). <br></br>
+            /// Keeps the current aspect ratio.
+            /// </summary>
             FitToHeight = 1,
+
+            /// <summary>
+            /// Fit the displayed range to the new width (fixed X range on resize). <br></br>
+            /// Keeps the current aspect ratio.
+            /// </summary>
             FitToWidth = 2,
+
+            /// <summary>
+            /// Fit the displayed range to the new width and height (keep current X and Y range on resize).
+            /// </summary>
             FitToWidthAndHeight = FitToHeight | FitToWidth,
+
         }
 
         public enum TimeModes
         {
-            // Resize to always show all values
+            /// <summary>
+            /// Resize to always show all values
+            /// </summary>
             Fit,
-            // Show values between min and max x
+
+            /// <summary>
+            /// Show values between min and max x
+            /// </summary>
             Pinned,
-            // Scroll for new values
+
+            /// <summary>
+            /// Scroll for new values
+            /// </summary>
             Scrolling,
-            // Reset to start when reaching max x
+
+            /// <summary>
+            /// Reset to start when reaching max x
+            /// </summary>
             Reset
         }
 
+        /// <summary>
+        /// Describes how the X range is transformed, when new values are added.
+        /// </summary>
         public TimeModes TimeMode { get; set; } = TimeModes.Reset;
+
+        /// <summary>
+        /// Describes how the axis boundaries are transformed, when the control is resized.
+        /// </summary>
         public SizeModes SizeMode { get; set; } = SizeModes.FitToHeight;
 
         public float MinX { get; set; } = 0;
@@ -290,7 +321,6 @@ namespace EcgBLEApp.Views
                     XScale = width / RangeX;
                     YScale = height / RangeY;
                     break;
-                case SizeModes.Scale:
                 default:
                     // Dont change x and y scales
                     break;
