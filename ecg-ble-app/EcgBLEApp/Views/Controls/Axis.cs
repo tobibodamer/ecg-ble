@@ -47,7 +47,7 @@ namespace EcgBLEApp.Views
         /// <summary>
         /// Try to keep the aspect ratio by changing the range of the other axis.
         /// </summary>
-        FitOtherAxis,
+        Fit,
 
         /// <summary>
         /// Ignore the size limit.

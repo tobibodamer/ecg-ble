@@ -15,6 +15,9 @@ namespace EcgBLEApp.Views
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class ChartControl : ContentView
     {
+        private SKRect _lastWindow = SKRect.Empty;
+        private SKMatrix _chartToDeviceMatrix, _deviceToChartMatrix;
+        private int _lastValueCount;
         public ChartControl()
         {
             InitializeComponent();
@@ -27,8 +30,6 @@ namespace EcgBLEApp.Views
             canvasView.EnableTouchEvents = true;
             canvasView.Touch += CanvasView_Touch;
         }
-
-
 
         protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
@@ -67,8 +68,6 @@ namespace EcgBLEApp.Views
         public static readonly BindableProperty FramesPerSecondProperty =
             BindableProperty.Create("FramesPerSecond", typeof(double), typeof(ChartControl), 60.0);
 
-
-        private int _lastValueCount;
 
         async Task AnimationLoop()
         {
@@ -129,7 +128,7 @@ namespace EcgBLEApp.Views
             ExtendWidth,
 
             /// <summary>
-            /// Extends the displayed Y range to fit the width, while keeping the current X range. <br></br>
+            /// Extends the displayed Y range to fit the height, while keeping the current X range. <br></br>
             /// Keeps the current Y scale.
             /// </summary>
             ExtendHeight,
@@ -331,10 +330,9 @@ namespace EcgBLEApp.Views
             BothAxis = XAxis | YAxis,
         }
 
-        #endregion
+        #endregion        
 
-        private SKRect _lastWindow = SKRect.Empty;
-        private SKMatrix _chartToDeviceMatrix, _deviceToChartMatrix;
+        #region Scaling / Range
 
         /// <summary>
         /// Updates the min and max values to achieve a new range, by maintaining the center position of the axis.
@@ -365,49 +363,218 @@ namespace EcgBLEApp.Views
             return (min, max);
         }
 
+        [Flags]
+        private enum AxisTypes
+        {
+            X = 1,
+            Y = 2,
+            Both = X | Y
+        }
+
+        /// <summary>
+        /// Gets the best possible range for a given target range, while respecting the boundaries of the axis.
+        /// 
+        /// </summary>
+        /// <param name="newRange">The new target range.</param>
+        /// <param name="currentMin">The current min value.</param>
+        /// <param name="currentMax">The current max value.</param>
+        /// <param name="axis">The axis.</param>
+        /// <param name="zero">The zero (reference) value.</param>
+        /// <returns>Returns the new min and max values, and a true if the target range can be achieved.</returns>
+        private (float min, float max, bool fits) GetClosestRange(ref float newRange, float currentMin, float currentMax, Axis axis, float zero)
+        {
+            float min, max;
+            bool fits = false;
+            float currentRange = Math.Abs(currentMax - currentMin);
+
+
+            // Check range limits first
+            if (axis.MaxRange.HasValue && newRange > axis.MaxRange && newRange >= currentRange)
+            {
+                // Too large and getting larger
+                newRange = axis.MaxRange.Value;
+            }
+            else if (axis.MinRange.HasValue && newRange < axis.MinRange && newRange <= currentRange)
+            {
+                // Too small and getting smaller                    
+                newRange = axis.MinRange.Value;
+            }
+            else
+            {
+                // Fits, when the total max range can be resepected too
+                fits = newRange <= axis.MaximumRange;
+            }
+
+            // Calculate min and max
+            (min, max) = GetNewRange(currentMin, currentMax, zero, currentRange, newRange);
+
+            return (Math.Max(axis.Minimum, min), Math.Min(axis.Maximum, max), fits);
+        }
+
+
+        /// <summary>
+        /// Adjust the <see cref="XScale"/> or <see cref="YScale"/>, to fit the range to the <paramref name="height"/> or <paramref name="width"/>.
+        /// </summary>
+        /// <param name="axisTypes"></param>
+        /// <param name="height"></param>
+        /// <param name="width"></param>
+        private void RescaleToFitRange(AxisTypes axisTypes, float height, float width)
+        {
+            if (axisTypes.HasFlag(AxisTypes.X))
+            {
+                XScale = width / XRange;
+            }
+
+            if (axisTypes.HasFlag(AxisTypes.Y))
+            {
+                YScale = height / YRange;
+            }
+        }
+
+        /// <summary>
+        /// Applies the values from <see cref="GetClosestRange(ref float, float, float, Axis, float)"/> for the given <paramref name="axis"/>.
+        /// </summary>
+        /// <param name="newRange">The target range.</param>
+        /// <param name="axis">The axis, must be either <see cref="AxisTypes.X"/> or <see cref="AxisTypes.Y"/>.</param>
+        /// <returns>True if the target range was achieved.</returns>
+        private bool SetBestPossibleRange(float newRange, AxisTypes axis)
+        {
+            bool fits = true;
+            float min, max, minWindow, maxWindow;
+
+            switch (axis)
+            {
+                case AxisTypes.X:
+                    (min, max, fits) = GetClosestRange(ref newRange, MinX, MaxX, XAxis, (float)ZeroPoint.X);
+                    (minWindow, maxWindow, _) = GetClosestRange(ref newRange, _lastWindow.Left, _lastWindow.Right, XAxis, (float)ZeroPoint.X);
+                    MinX = min; MaxX = max; _lastWindow.Left = minWindow; _lastWindow.Right = maxWindow;
+                    break;
+                case AxisTypes.Y:
+                    (min, max, fits) = GetClosestRange(ref newRange, MinY, MaxY, YAxis, (float)ZeroPoint.Y);
+                    (minWindow, maxWindow, _) = GetClosestRange(ref newRange, _lastWindow.Top, _lastWindow.Bottom, YAxis, (float)ZeroPoint.Y);
+                    MinY = min; MaxY = max; _lastWindow.Top = minWindow; _lastWindow.Bottom = maxWindow;
+                    break;
+            }
+
+            return fits;
+        }
+
+        /// <summary>
+        /// Adjust the range of the given <paramref name="axisType"/> to fit to the <paramref name="height"/> or <paramref name="width"/>,
+        /// by maintaining the scale. <br></br>
+        /// If <paramref name="ignoreLimit"/> is not set, the other axis will be rescaled according to the <see cref="Axis.SizeLimitMode"/>.
+        /// </summary>
+        /// <param name="axisType"></param>
+        /// <param name="height"></param>
+        /// <param name="width"></param>
+        /// <param name="aspectRatio"></param>
+        /// <param name="ignoreLimit"></param>
+        private void AdjustRangeToFitScale(AxisTypes axisType, float height, float width, float aspectRatio, bool ignoreLimit)
+        {
+            float newRange;
+            Axis axis;
+
+            if (axisType == AxisTypes.X)
+            {
+                newRange = (width / XScale);
+                axis = XAxis;
+            }
+            else if (axisType == AxisTypes.Y)
+            {
+                newRange = (height / YScale);
+                axis = YAxis;
+            }
+            else
+            {
+                AdjustRangeToFitScale(AxisTypes.X, height, width, aspectRatio, ignoreLimit);
+                AdjustRangeToFitScale(AxisTypes.Y, height, width, aspectRatio, ignoreLimit);
+                return;
+            }
+
+            bool fits = SetBestPossibleRange(newRange, axisType);
+
+            if (!ignoreLimit && !fits)
+            {
+                if (axis.SizeLimitMode == SizeLimitMode.Fit)
+                {
+                    // Fit limiting axis to size
+                    FitToSize(axisType, height, width, aspectRatio, true);
+                }
+                else
+                {
+                    // FitToWidthAndHeight
+                    RescaleToFitRange(AxisTypes.Both, height, width);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fit the range of the given <paramref name="axis"/> to the <paramref name="height"/> or <paramref name="width"/>, by adjusting its scale. <br></br>
+        /// If only one axis is given, the other axis will be adjusted while the aspect ratio ist maintained.
+        /// </summary>
+        /// <param name="axis">The axis to fit (can be both).</param>
+        /// <param name="height">The new height.</param>
+        /// <param name="width">The new width.</param>
+        /// <param name="aspectRatio">The aspect ratio to maintain.</param>
+        /// <param name="ignoreLimit">Ignore the limit when adjusting the other axis.</param>
+        private void FitToSize(AxisTypes axis, float height, float width, float aspectRatio, bool ignoreLimit)
+        {
+            AxisTypes otherAxis;
+
+            // Fit the range to the size
+            RescaleToFitRange(axis, height, width);
+
+            // Adjust other scale to keep aspect ratio
+            if (axis == AxisTypes.X)
+            {
+                YScale = XScale / aspectRatio; // Adjust y scale to maintain aspect ratio
+                otherAxis = AxisTypes.Y;
+            }
+            else
+            {
+                XScale = YScale * aspectRatio; // Adjust x scale to maintain aspect ratio                
+                otherAxis = AxisTypes.X;
+            }
+
+            // Adjust the range of the other axis
+            AdjustRangeToFitScale(otherAxis, height, width, aspectRatio, ignoreLimit);
+        }
+
         private void ConfigureScale(float height, float width)
         {
-
             float aspectRatio = AspectRatio;
-
-
 
             switch (SizeMode)
             {
+                case SizeModes.ExtendWidth:
+                    RescaleToFitRange(AxisTypes.Y, height, width); // Adjust YScale (keep YRange, keep XScale)
+                    AdjustRangeToFitScale(AxisTypes.X, height, width, aspectRatio, false);
+                    break;
+                case SizeModes.ExtendHeight:
+                    RescaleToFitRange(AxisTypes.X, height, width);
+                    AdjustRangeToFitScale(AxisTypes.Y, height, width, aspectRatio, false);
+                    break;
+                case SizeModes.Extend:
+                    AdjustRangeToFitScale(AxisTypes.Both, height, width, aspectRatio, false);
+                    break;
                 case SizeModes.FitToHeight:
-                    YScale = height / YRange;
-                    XScale = YScale * aspectRatio; // Adjust x scale
-
-                    // Fit x range
-                    float newXRange = (width / XScale);
-                    (MinX, MaxX) = GetNewRange(MinX, MaxX, (float)ZeroPoint.X, XRange, newXRange);
-
-                    // Fit last window
-                    (_lastWindow.Left, _lastWindow.Right) = GetNewRange(
-                        _lastWindow.Left, _lastWindow.Right, (float)ZeroPoint.X, _lastWindow.Width, newXRange);
-
+                    FitToSize(AxisTypes.Y, height, width, aspectRatio, false);
                     break;
                 case SizeModes.FitToWidth:
-                    XScale = width / XRange;
-                    YScale = XScale / aspectRatio;
-
-                    // Fit y range
-                    float newYRange = (height / YScale);
-                    (MinY, MaxY) = GetNewRange(MinY, MaxY, (float)ZeroPoint.Y, YRange, newYRange);
-
-                    // Fit last window
-                    (_lastWindow.Top, _lastWindow.Bottom) = GetNewRange(
-                        _lastWindow.Top, _lastWindow.Bottom, (float)ZeroPoint.Y, _lastWindow.Height, newYRange);
+                    FitToSize(AxisTypes.X, height, width, aspectRatio, false);
                     break;
                 case SizeModes.FitToWidthAndHeight:
-                    XScale = width / XRange;
-                    YScale = height / YRange;
+                    RescaleToFitRange(AxisTypes.Both, height, width);
                     break;
                 default:
                     // Dont change x and y scales
                     break;
             }
         }
+
+        #endregion
+
+        #region Transform
         private void ConfigureTransforms(SKPoint ChartMin, SKPoint ChartMax, SKPoint DeviceMin, SKPoint DeviceMax)
         {
             float xOffset = -ChartMin.X * XScale + DeviceMin.X;
@@ -416,7 +583,6 @@ namespace EcgBLEApp.Views
             _chartToDeviceMatrix = SKMatrix.CreateScaleTranslation(XScale, -YScale, xOffset, yOffset);
             _chartToDeviceMatrix.TryInvert(out _deviceToChartMatrix);
         }
-
 
         /// <summary>
         /// Transform a point from chart to device coordinates.
@@ -433,7 +599,9 @@ namespace EcgBLEApp.Views
             return _deviceToChartMatrix.MapPoint(point);
         }
 
+        #endregion
 
+        #region Draw
         private void OnCanvasViewPaintSurface(object sender, SKPaintSurfaceEventArgs args)
         {
             SKImageInfo info = args.Info;
@@ -618,6 +786,8 @@ namespace EcgBLEApp.Views
                 }
             }
         }
+
+        #endregion
 
         private float CalculateFadeOutFactor(int age)
         {
@@ -866,8 +1036,8 @@ namespace EcgBLEApp.Views
             var newMax = transformMatrix.MapPoint(MaxX, MaxY);
             var newRange = newMax - newMin;
 
-            bool xCanFit = (newMin.X >= XAxis.Minimum || newMax.X <= XAxis.Maximum) && 
-                (XAxis.ForceRangeLimit 
+            bool xCanFit = (newMin.X >= XAxis.Minimum || newMax.X <= XAxis.Maximum) &&
+                (XAxis.ForceRangeLimit
                     ? ((XAxis.MaxRange >= newRange.X || scaleX < 1) && (XAxis.MinRange <= newRange.X || scaleX > 1)) // check if in resize range limit, or if getting out of it
                     : XAxis.MaximumRange >= newRange.X || scaleX < 1); // check absolute range limit, or if getting out of it
 
