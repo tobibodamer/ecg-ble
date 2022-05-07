@@ -30,6 +30,7 @@ namespace EcgBLEApp.ViewModels
 
             file.ReadVersion();
             file.ReadSamplingRate();
+            file.GetSamplesCount();
 
             return file;
         }
@@ -55,6 +56,9 @@ namespace EcgBLEApp.ViewModels
         private ushort _samplingRate;
         public ushort SamplingRate => _samplingRate;
 
+        private long _samplesCount;
+        public long SamplesCount => _samplesCount;
+
         public string FileName { get; }
 
         private bool ReadSamplingRate()
@@ -68,7 +72,7 @@ namespace EcgBLEApp.ViewModels
             {
                 try
                 {
-                    if (_reader.BaseStream.Seek(2, SeekOrigin.Begin) != 2)
+                    if (_reader.BaseStream.Seek(2, SeekOrigin.Begin) != 2 || _reader.BaseStream.Length < 4)
                     {
                         return false;
                     }
@@ -210,6 +214,17 @@ namespace EcgBLEApp.ViewModels
 
             Span<byte> bytes = MemoryMarshal.AsBytes(message.AsSpan());
             _writer.Write(bytes.ToArray(), 0, bytes.Length);
+            _samplesCount += 2;
+        }
+
+        private void GetSamplesCount()
+        {
+            if (!CanRead)
+            {
+                return;
+            }
+
+            _samplesCount = (_reader.BaseStream.Length - 6) / 2;
         }
 
         public void Dispose()

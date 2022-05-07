@@ -13,6 +13,7 @@ namespace EcgBLEApp
             InitializeComponent();
             Routing.RegisterRoute(nameof(ItemDetailPage), typeof(ItemDetailPage));
             Routing.RegisterRoute(nameof(NewItemPage), typeof(NewItemPage));
+            Routing.RegisterRoute(nameof(EcgFileView), typeof(EcgFileView));
         }
 
         private async void OnMenuItemClicked(object sender, EventArgs e)

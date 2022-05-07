@@ -9,12 +9,14 @@ using Xamarin.Forms;
 
 namespace EcgBLEApp.ViewModels
 {
+    [QueryProperty(nameof(Path), nameof(Path))]
     public class EcgFileViewModel : BaseViewModel
     {
         private EcgFile _currentFile = null;
         private readonly BufferBlock<ushort> _sampleBlock = new BufferBlock<ushort>();
 
         public ObservableCollection<float> Values { get; } = new ObservableCollection<float>();
+
 
         private int _pollingRate;
         public int PollingRate
@@ -37,7 +39,24 @@ namespace EcgBLEApp.ViewModels
             set => SetProperty(ref _fileName, value);
         }
 
+        private string _path;
+        public string Path
+        {
+            get => _path;
+            set
+            {
+                if (SetProperty(ref _path, value))
+                {
+                    if (_path == null) { return; }
+
+                    Task.Run(async () => await ReadFile(new FileResult(_path)))
+                        .ContinueWith(t => t.Exception?.Handle(ex => true));
+                }
+            }
+        }
+
         public ICommand OpenFileCommand { get; }
+
 
         public EcgFileViewModel()
         {
@@ -55,7 +74,7 @@ namespace EcgBLEApp.ViewModels
 
             var addToValues = new ActionBlock<double>(async sample =>
             {
-                Values.Add((float)sample);
+                Values.Add((float)sample);                
                 await Task.Delay(TimeSpan.FromSeconds(1.0 / PollingRate));
             });
 
@@ -84,7 +103,7 @@ namespace EcgBLEApp.ViewModels
                 _currentFile.Dispose();
                 _sampleBlock.TryReceiveAll(out _);
             }
-
+            
             _currentFile = EcgFile.OpenRead(fileName, stream);
 
             IsFileOpen = true;

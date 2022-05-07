@@ -6,9 +6,6 @@
     <ContentView.Content>
         <Grid HorizontalOptions="Fill" VerticalOptions="FillAndExpand" x:Name="grid">
             <skia:SKCanvasView x:Name="canvasView" PaintSurface="OnCanvasViewPaintSurface"/>
-            <!--<Grid.Effects>
-                <tt:TouchEffect Capture="True" TouchAction="OnTouchEffectAction" />
-            </Grid.Effects>-->
         </Grid>
     </ContentView.Content>    
 </ContentView>

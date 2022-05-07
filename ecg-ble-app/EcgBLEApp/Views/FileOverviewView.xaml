@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="EcgBLEApp.Views.FileOverviewView"
+             xmlns:vm="clr-namespace:EcgBLEApp.ViewModels"
+             xmlns:converters="clr-namespace:EcgBLEApp.Converters"
+             xmlns:views="clr-namespace:EcgBLEApp.Views"
+             xmlns:xct="http://xamarin.com/schemas/2020/toolkit"
+             Title="{Binding Title}">
+
+    <ContentPage.BindingContext>
+        <vm:FileOverviewViewModel />
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Color x:Key="Accent">#96d1ff</Color>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+
+
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.Behaviors>
+        <!--<xct:EventToCommandBehavior EventName="Appearing" Command="{Binding RefreshFilesCommand}"/>-->
+    </ContentPage.Behaviors>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackLayout Orientation="Vertical" Spacing="10">
+            <Label Text="ECG files" FontSize="Title" Padding="30,24,0,0"/>
+            <!--<AbsoluteLayout>-->
+
+            <ListView ItemsSource="{Binding Files}" SelectionMode="None" RowHeight="60" 
+                      IsPullToRefreshEnabled="True" 
+                      IsRefreshing="{Binding IsRefreshing}" 
+                      RefreshCommand="{Binding RefreshFilesCommand}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell Tapped="ViewCell_Tapped">
+                            <Grid HorizontalOptions="Fill" VerticalOptions="FillAndExpand" RowSpacing="0" Margin="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Image Source="health_report.png" HeightRequest="40" VerticalOptions="Center" HorizontalOptions="Start"
+                                               Grid.RowSpan="2" />
+
+                                <Label Text="{Binding FileName}" FontSize="Default" FontAttributes="Bold"
+                                               LineBreakMode="TailTruncation" WidthRequest="100"
+                                               Grid.Column="1" Margin="0,5,0,5"/>
+
+                                <StackLayout Grid.Column="1" Grid.Row="1" VerticalOptions="Center" Orientation="Horizontal" Spacing="25">
+                                    <Label Text="{Binding LastWriteTime}" FontSize="Micro"  TextColor="#AAA" Grid.Column="1" Grid.Row="1" VerticalOptions="Center"/>
+                                    <Label Text="{Binding SamplingRate, StringFormat='{0} Hz'}" 
+                                                   FontSize="Micro"  TextColor="LightBlue" 
+                                                   Grid.Column="1" Grid.Row="0"
+                                                   HorizontalOptions="End"
+                                                   VerticalOptions="Center" />
+                                </StackLayout>
+
+
+                                <Label Text="{Binding Length}" 
+                                                   FontSize="Small" TextColor="#AAA" 
+                                                   Grid.Column="1" Grid.Row="1" 
+                                                   HorizontalOptions="End" 
+                                                   VerticalOptions="Center"/>
+                            </Grid>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <!--</RefreshView>-->
+        </StackLayout>
+        <!--<StackLayout AbsoluteLayout.LayoutFlags="All" AbsoluteLayout.LayoutBounds="0,0,1,1" Padding="30" InputTransparent="True">
+                    <ActivityIndicator IsRunning="{Binding IsRefreshing}" VerticalOptions="StartAndExpand" InputTransparent="True" HorizontalOptions="CenterAndExpand"/>
+                </StackLayout>-->
+        <!--</AbsoluteLayout>-->
+    </Grid>
+
+</ContentPage>
