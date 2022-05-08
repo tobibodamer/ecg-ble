@@ -4,8 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Windows.Input;
-using Xamarin.Essentials;
-using Xamarin.Forms;
+using Microsoft.Maui; 
+using Microsoft.Maui.Controls;
 
 namespace EcgBLEApp.ViewModels
 {
@@ -74,8 +74,9 @@ namespace EcgBLEApp.ViewModels
 
             var addToValues = new ActionBlock<double>(async sample =>
             {
-                Values.Add((float)sample);                
-                await Task.Delay(TimeSpan.FromSeconds(1.0 / PollingRate));
+                Values.Add((float)sample);
+                Thread.Sleep(1000 / PollingRate);
+                //await Task.Delay(TimeSpan.FromSeconds(1.0 / PollingRate));
             });
 
             _sampleBlock.LinkTo(applyFilter);

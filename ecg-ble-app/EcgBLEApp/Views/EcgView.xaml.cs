@@ -7,15 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcgBLEApp.Filtering;
 using EcgBLEApp.ViewModels;
-using Plugin.Permissions;
 using SkiaSharp;
-using SkiaSharp.Views.Forms;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui;
+using Microsoft.Maui.Controls.Xaml;
 
 namespace EcgBLEApp.Views
 {
-    [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class EcgView : ContentPage
     {
         public EcgView()

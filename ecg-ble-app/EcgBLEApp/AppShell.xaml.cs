@@ -2,11 +2,12 @@
 using EcgBLEApp.Views;
 using System;
 using System.Collections.Generic;
-using Xamarin.Forms;
+using Microsoft.Maui; 
+using Microsoft.Maui.Controls;
 
 namespace EcgBLEApp
 {
-    public partial class AppShell : Xamarin.Forms.Shell
+    public partial class AppShell : Shell
     {
         public AppShell()
         {

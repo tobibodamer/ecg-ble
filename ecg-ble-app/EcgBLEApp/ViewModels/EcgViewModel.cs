@@ -2,8 +2,6 @@
 using Plugin.BLE;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
-using Plugin.Permissions;
-using Plugin.Permissions.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -15,7 +13,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Windows.Input;
-using Xamarin.Forms;
+using Microsoft.Maui; using Microsoft.Maui.Controls;
+//using Plugin.Permissions;
+//using Plugin.Permissions.Abstractions;
 
 namespace EcgBLEApp.ViewModels
 {
@@ -43,18 +43,26 @@ namespace EcgBLEApp.ViewModels
             StartScanningCommand = new Command(async () =>
             {
                 // Get location permission to scan bluetooth devices
-
+                
                 try
                 {
-                    var status = await CrossPermissions.Current.CheckPermissionStatusAsync<LocationPermission>();
+                    var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+                    //var status = await CrossPermissions.Current.CheckPermissionStatusAsync<LocationPermission>();
                     if (status != PermissionStatus.Granted)
                     {
-                        if (await CrossPermissions.Current.ShouldShowRequestPermissionRationaleAsync(Permission.Location))
+                        if (Permissions.ShouldShowRationale<Permissions.LocationWhenInUse>())
                         {
                             // TODO: Display alert
                         }
 
-                        status = await CrossPermissions.Current.RequestPermissionAsync<LocationPermission>();
+                        status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+
+                        //if (await CrossPermissions.Current.ShouldShowRequestPermissionRationaleAsync(Permission.Location))
+                        //{
+                        //    // TODO: Display alert
+                        //}
+
+                        //status = await CrossPermissions.Current.RequestPermissionAsync<LocationPermission>();
                     }
 
                     if (status == PermissionStatus.Granted)
@@ -203,15 +211,15 @@ namespace EcgBLEApp.ViewModels
         private async Task InitFileRecording()
         {
             // Ensure storage permission is granted
-            var status = await CrossPermissions.Current.CheckPermissionStatusAsync<StoragePermission>();
+            var status = await Permissions.CheckStatusAsync<Permissions.StorageRead>();
             if (status != PermissionStatus.Granted)
             {
-                if (await CrossPermissions.Current.ShouldShowRequestPermissionRationaleAsync(Permission.Storage))
+                if (Permissions.ShouldShowRationale<Permissions.StorageRead>())
                 {
                     //await DisplayAlert("Need storage, "Request storage permission", "OK");
                 }
 
-                status = await CrossPermissions.Current.RequestPermissionAsync<StoragePermission>();
+                status = await Permissions.RequestAsync<Permissions.StorageRead>();
             }
 
             if (status != PermissionStatus.Granted)

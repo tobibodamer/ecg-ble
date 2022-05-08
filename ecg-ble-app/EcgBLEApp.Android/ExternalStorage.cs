@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Xamarin.Forms;
 
 [assembly: Dependency(typeof(AndroidExternalStorage))]
 namespace ecg_ble_app.Droid

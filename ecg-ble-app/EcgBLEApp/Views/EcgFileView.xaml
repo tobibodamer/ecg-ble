@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="EcgBLEApp.Views.EcgFileView"
              xmlns:vm="clr-namespace:EcgBLEApp.ViewModels"
@@ -23,16 +23,16 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ScrollView Grid.Row="1" InputTransparent="True">
-            <StackLayout Orientation="Vertical" Padding="30,24,30,24" Spacing="10">
-            <Label Text="View ECG files" FontSize="Title"/>
+        <!--<ScrollView Grid.Row="1">-->
+        <StackLayout Orientation="Vertical" Padding="30,24,30,24" Spacing="10" Grid.Row="1">
+            <Label Text="View ECG files" FontSize="Title" />
 
             <Button Text="Open..." BackgroundColor="Orchid"
                         Command="{Binding OpenFileCommand}"/>
 
             <StackLayout Orientation="Vertical" Spacing="10" IsVisible="{Binding IsFileOpen}">
                 <Label Text="{Binding FileName}"/>
-                    <views:ChartControl x:Name="ChartControl" Values="{Binding Values}"
+                <views:ChartControl x:Name="ChartControl" Values="{Binding Values}"
                                         GridColor="#e0816e" ShowGrid="True" GridAlignment="YAxis"
                                         MinY="-3" MaxY="3" SizeMode="Extend"
                                         MaxX="2400"
@@ -40,16 +40,16 @@
                                         TimeMode="Reset" StopTrackingOnDrag="True" StopTrackingOnZoom="True"
                                         ZoomMode="BothKeepAspectRatio" MaxZoom="0.05"
                                         HeightRequest="150">
-                        <views:ChartControl.YAxis>
-                            <views:Axis Minimum="-6" Maximum="6" MinRange="2" ForceRangeLimit="False" SizeLimitMode="Fit"/>
-                        </views:ChartControl.YAxis>
-                        <!--<views:ChartControl.XAxis>
+                    <views:ChartControl.YAxis>
+                        <views:Axis Minimum="-6" Maximum="6" MinRange="2" ForceRangeLimit="False" SizeLimitMode="Fit"/>
+                    </views:ChartControl.YAxis>
+                    <!--<views:ChartControl.XAxis>
                             <views:Axis Minimum="0" MaxRange="1800" ForceRangeLimit="False" SizeLimitMode="ExtendOtherAxis"/>
                         </views:ChartControl.XAxis>-->
-                    </views:ChartControl>
+                </views:ChartControl>
             </StackLayout>
         </StackLayout>
-        </ScrollView>
+        <!--</ScrollView>-->
     </Grid>
 
 </ContentPage>

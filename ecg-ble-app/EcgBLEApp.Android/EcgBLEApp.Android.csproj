@@ -1,4 +1,44 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <UseMaui>true</UseMaui>
+    <TargetFramework>net6.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+	<SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net6.0-android'">31.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+    <PropertyGroup>
+		<UseInterpreter Condition="$(TargetFramework.Contains('-android'))">True</UseInterpreter>
+		<SupportedOSPlatformVersion>28.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+	<ItemGroup>
+		<AndroidResource Include="Resources\values\styles.xml" />
+		<AndroidResource Include="Resources\values\colors.xml" />
+		<AndroidResource Include="Resources\mipmap-anydpi-v26\icon.xml" />
+		<AndroidResource Include="Resources\mipmap-anydpi-v26\icon_round.xml" />
+		<AndroidResource Include="Resources\mipmap-hdpi\icon.png" />
+		<AndroidResource Include="Resources\mipmap-hdpi\launcher_foreground.png" />
+		<AndroidResource Include="Resources\mipmap-mdpi\icon.png" />
+		<AndroidResource Include="Resources\mipmap-mdpi\launcher_foreground.png" />
+		<AndroidResource Include="Resources\mipmap-xhdpi\icon.png" />
+		<AndroidResource Include="Resources\mipmap-xhdpi\launcher_foreground.png" />
+		<AndroidResource Include="Resources\mipmap-xxhdpi\icon.png" />
+		<AndroidResource Include="Resources\mipmap-xxhdpi\launcher_foreground.png" />
+		<AndroidResource Include="Resources\mipmap-xxxhdpi\icon.png" />
+		<AndroidResource Include="Resources\mipmap-xxxhdpi\launcher_foreground.png" />
+		<AndroidResource Include="Resources\drawable\xamarin_logo.png" />
+		<AndroidResource Include="Resources\drawable\icon_about.png" />
+		<AndroidResource Include="Resources\drawable\icon_feed.png" />
+		<AndroidResource Include="Resources\drawable\health_report.png" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\EcgBLEApp\EcgBLEApp.csproj">
+			<Project>{1C74DE8A-261B-4AE6-9656-40C9D5F66BC3}</Project>
+			<Name>ecg_ble_app</Name>
+		</ProjectReference>
+	</ItemGroup>
+</Project>
+
+<!-- <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -102,4 +142,4 @@
     <AndroidResource Include="Resources\drawable\health_report.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
-</Project>
+</Project> -->

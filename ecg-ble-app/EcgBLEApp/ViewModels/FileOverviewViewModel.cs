@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Xamarin.Forms;
+using Microsoft.Maui; using Microsoft.Maui.Controls;
 
 namespace EcgBLEApp.ViewModels
 {
@@ -28,6 +28,8 @@ namespace EcgBLEApp.ViewModels
 
         public FileOverviewViewModel()
         {
+            Title = "Browse files";
+
             RefreshFilesCommand = new Command(async () =>
             {
                 IsRefreshing = true;

@@ -7,20 +7,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using EcgBLEApp.Filtering;
 using EcgBLEApp.ViewModels;
-using Plugin.Permissions;
 using SkiaSharp;
-using SkiaSharp.Views.Forms;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using Microsoft.Maui; using Microsoft.Maui.Controls;
+using Microsoft.Maui; using Microsoft.Maui.Controls.Xaml;
 
 namespace EcgBLEApp.Views
 {
-    [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class EcgFileView : ContentPage
     {
         public EcgFileView()
         {
             InitializeComponent();
+
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
         public EcgFileViewModel ViewModel => BindingContext as EcgFileViewModel;
@@ -29,9 +28,10 @@ namespace EcgBLEApp.Views
         {
             base.OnAppearing();
 
-            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-
-            ChartControl.YScale = 70 / 0.5f; // 70px / 0.5mV
+            if (ViewModel != null && ViewModel.PollingRate > 0)
+            {
+                UpdateSizing();
+            }
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

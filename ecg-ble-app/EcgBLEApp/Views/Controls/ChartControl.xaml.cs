@@ -1,5 +1,4 @@
 ﻿using SkiaSharp;
-using SkiaSharp.Views.Forms;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,12 +6,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using SkiaSharp.Views.Maui;
 
 namespace EcgBLEApp.Views
 {
-    [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class ChartControl : ContentView
     {
         private SKRect _lastWindow = SKRect.Empty;
@@ -275,7 +272,7 @@ namespace EcgBLEApp.Views
         }
 
         public static readonly BindableProperty GridColorProperty =
-            BindableProperty.Create("GridColor", typeof(Color), typeof(ChartControl), Color.LightGray);
+            BindableProperty.Create("GridColor", typeof(Color), typeof(ChartControl), Colors.LightGray);
 
         public Color FineGridColor
         {
@@ -284,7 +281,7 @@ namespace EcgBLEApp.Views
         }
 
         public static readonly BindableProperty FineGridColorProperty =
-            BindableProperty.Create("FineGridColor", typeof(Color), typeof(ChartControl), Color.LightGray);
+            BindableProperty.Create("FineGridColor", typeof(Color), typeof(ChartControl), Colors.LightGray);
 
         public Size GridSize
         {
