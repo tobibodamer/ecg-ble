@@ -1,4 +1,5 @@
 ﻿using EcgBLEApp.Filtering;
+using EcgBLEApp.Models;
 using Plugin.BLE;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
@@ -258,7 +259,7 @@ namespace EcgBLEApp.ViewModels
             {
                 if (_currentEcgFile != null)
                 {
-                    _currentEcgFile.WriteMessage(message);
+                    _currentEcgFile.WriteSamples(message);
                 }
             });
 

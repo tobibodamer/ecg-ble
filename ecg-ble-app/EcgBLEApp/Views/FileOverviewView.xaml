@@ -32,17 +32,17 @@
         </Grid.RowDefinitions>
 
         <StackLayout Orientation="Vertical" Spacing="10">
-            <Label Text="ECG files" FontSize="Title" Padding="30,24,0,0"/>
+            <!--<Label Text="ECG files" FontSize="Title" Padding="30,24,0,0"/>-->
             <!--<AbsoluteLayout>-->
 
-            <ListView ItemsSource="{Binding Files}" SelectionMode="None" RowHeight="60" 
+            <ListView ItemsSource="{Binding Files}" SelectionMode="None" RowHeight="80" 
                       IsPullToRefreshEnabled="True" 
                       IsRefreshing="{Binding IsRefreshing}" 
                       RefreshCommand="{Binding RefreshFilesCommand}">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <ViewCell Tapped="ViewCell_Tapped">
-                            <Grid HorizontalOptions="Fill" VerticalOptions="FillAndExpand" RowSpacing="0" Margin="5">
+                            <Grid HorizontalOptions="Fill" VerticalOptions="CenterAndExpand" RowSpacing="0" Margin="5">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -60,7 +60,7 @@
                                                Grid.Column="1" Margin="0,5,0,5"/>
 
                                 <StackLayout Grid.Column="1" Grid.Row="1" VerticalOptions="Center" Orientation="Horizontal" Spacing="25">
-                                    <Label Text="{Binding LastWriteTime}" FontSize="Micro"  TextColor="#AAA" Grid.Column="1" Grid.Row="1" VerticalOptions="Center"/>
+                                    <Label Text="{Binding LastWriteTime}" FontSize="Small"  TextColor="#AAA" Grid.Column="1" Grid.Row="1" VerticalOptions="Center"/>
                                     <Label Text="{Binding SamplingRate, StringFormat='{0} Hz'}" 
                                                    FontSize="Micro"  TextColor="LightBlue" 
                                                    Grid.Column="1" Grid.Row="0"

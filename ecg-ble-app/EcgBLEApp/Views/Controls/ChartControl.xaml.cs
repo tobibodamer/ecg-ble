@@ -364,7 +364,7 @@ namespace EcgBLEApp.Views
         }
 
         [Flags]
-        private enum AxisTypes
+        public enum AxisTypes
         {
             X = 1,
             Y = 2,
@@ -517,7 +517,7 @@ namespace EcgBLEApp.Views
         /// <param name="width">The new width.</param>
         /// <param name="aspectRatio">The aspect ratio to maintain.</param>
         /// <param name="ignoreLimit">Ignore the limit when adjusting the other axis.</param>
-        private void FitToSize(AxisTypes axis, float height, float width, float aspectRatio, bool ignoreLimit)
+        public void FitToSize(AxisTypes axis, float height, float width, float aspectRatio, bool ignoreLimit)
         {
             AxisTypes otherAxis;
 

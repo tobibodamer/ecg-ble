@@ -75,7 +75,7 @@
 
                     <Label Text="{Binding HR, StringFormat='{0} bpm'}" FontSize="20" HorizontalOptions="End"/>
 
-                    <views:ChartControl x:Name="ChartControl" Values="{Binding Values}" 
+                    <views:ChartControl x:Name="ChartControl" Values="{Binding FilteredValues}" 
                                         GridColor="#e0816e" ShowGrid="True" GridAlignment="BothAxis"
                                         MinY="-3" MaxY="3" SizeMode="FitToWidth"
                                         MaxX="2400"

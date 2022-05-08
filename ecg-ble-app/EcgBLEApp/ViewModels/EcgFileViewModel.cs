@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EcgBLEApp.Models;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
@@ -74,7 +75,7 @@ namespace EcgBLEApp.ViewModels
 
             var addToValues = new ActionBlock<double>(async sample =>
             {
-                Values.Add((float)sample);                
+                Values.Add((float)sample);
                 await Task.Delay(TimeSpan.FromSeconds(1.0 / PollingRate));
             });
 
@@ -103,7 +104,7 @@ namespace EcgBLEApp.ViewModels
                 _currentFile.Dispose();
                 _sampleBlock.TryReceiveAll(out _);
             }
-            
+
             _currentFile = EcgFile.OpenRead(fileName, stream);
 
             IsFileOpen = true;

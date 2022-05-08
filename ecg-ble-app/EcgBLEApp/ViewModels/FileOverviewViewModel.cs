@@ -1,4 +1,6 @@
-﻿using EcgBLEApp.Views;
+﻿using EcgBLEApp.Models;
+using EcgBLEApp.Views;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -28,6 +30,8 @@ namespace EcgBLEApp.ViewModels
 
         public FileOverviewViewModel()
         {
+            Title = "Browse files";
+
             RefreshFilesCommand = new Command(async () =>
             {
                 IsRefreshing = true;
@@ -68,23 +72,39 @@ namespace EcgBLEApp.ViewModels
 
             //List<FileViewModel> fileViewModels = new List<FileViewModel>();
 
+            EcgFile ecgFile = null;
+            DateTime lastWriteTime;
+
             foreach (var file in Directory.EnumerateFiles(folderPath, "*.ecg", SearchOption.AllDirectories))
             {
-                var lastWriteTime = File.GetLastWriteTime(file);
-                using (var ecgFile = EcgFile.OpenRead(file))
-                {
-                    if (ecgFile.SamplingRate == 0 || ecgFile.Version == 0 || ecgFile.SamplesCount == 0)
-                    {
-                        continue;
-                    }
+                lastWriteTime = File.GetLastWriteTime(file);
 
-                    yield return new FileViewModel(
-                        path: file,
-                        fileName: Path.GetFileName(file),
-                        samplesCount: ecgFile.SamplesCount,
-                        samplingRate: ecgFile.SamplingRate,
-                        lastWriteTime);
+                try
+                {
+                    ecgFile = EcgFile.OpenRead(file);
                 }
+                catch
+                {
+                    // Ignore exceptions, file probably invalid or something
+                    continue;
+                }
+                finally
+                {
+                    ecgFile?.Dispose();
+                }
+
+
+                if (ecgFile.SamplingRate == 0 || ecgFile.Version == 0 || ecgFile.SamplesCount == 0)
+                {
+                    continue;
+                }
+
+                yield return new FileViewModel(
+                    path: file,
+                    fileName: Path.GetFileName(file),
+                    samplesCount: ecgFile.SamplesCount,
+                    samplingRate: ecgFile.SamplingRate,
+                    lastWriteTime);
             }
 
             //return fileViewModels;
