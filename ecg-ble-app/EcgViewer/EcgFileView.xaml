@@ -1,0 +1,60 @@
+﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"           
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:EcgViewer.Views"
+      x:Class="EcgViewer.Views.EcgFileView"
+      xmlns:vm="clr-namespace:EcgViewer.ViewModels"
+      xmlns:converters="clr-namespace:EcgViewer.Converters" xmlns:controls="clr-namespace:EcgViewer.Controls">
+    <UserControl.DataContext>
+        <vm:EcgFileViewModel />
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Color x:Key="Accent">#96d1ff</Color>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Label Content="View ECG files" FontSize="20" Grid.Row="0"/>
+
+        <Button Content="Open..." Background="Orchid" Grid.Row="1"
+                        Command="{Binding OpenFileCommand}" Height="30" Width="200" VerticalAlignment="Top"/>
+
+        <StackPanel Orientation="Vertical" Visibility="{Binding IsFileOpen, Converter={StaticResource BoolToVisibilityConverter}}" Grid.Row="2">
+            <Label Content="{Binding FileName}"/>
+            <controls:ChartControl x:Name="ChartControl" Values="{Binding Values}"
+                                        GridColor="#e0816e" ShowGrid="True" GridAlignment="BothAxis"
+                                        MinY="-2" MaxY="2" SizeMode="FitToHeight"
+                                        MaxX="2400"
+                                        ZeroPoint="0,0"
+                                        TimeMode="Fit" StopTrackingOnDrag="True" StopTrackingOnZoom="True"
+                                        ZoomMode="BothKeepAspectRatio" MaxZoom="0.05"
+                                        Height="300">
+                <controls:ChartControl.YAxis>
+                    <controls:Axis Minimum="-6" Maximum="6" MinRange="2" ForceRangeLimit="False" SizeLimitMode="Fit"/>
+                </controls:ChartControl.YAxis>
+                <!--<views:ChartControl.XAxis>
+                            <views:Axis Minimum="0" MaxRange="1800" ForceRangeLimit="False" SizeLimitMode="ExtendOtherAxis"/>
+                        </views:ChartControl.XAxis>-->
+            </controls:ChartControl>
+
+            <ScrollBar Orientation="Horizontal" Maximum="{Binding Values.Count}" Scroll="ScrollBar_Scroll"/>
+
+            <Button Click="SkipToEndButton_Clicked" 
+                    Padding="7" Width="30" Height="30" HorizontalAlignment="Right" Background="LightSteelBlue">
+                <Image Source="/Assets/skip_bright.png"/>
+            </Button>
+        </StackPanel>
+    </Grid>
+
+</UserControl>
