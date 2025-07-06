@@ -33,6 +33,7 @@
         <StackPanel Orientation="Vertical" Visibility="{Binding IsFileOpen, Converter={StaticResource BoolToVisibilityConverter}}" Grid.Row="2">
             <Label Content="{Binding FileName}"/>
             <controls:ChartControl x:Name="ChartControl" Values="{Binding Values}"
+                                   StrokeWidth="2"
                                         GridColor="#e0816e" ShowGrid="True" GridAlignment="BothAxis"
                                         MinY="-2" MaxY="2" SizeMode="FitToHeight"
                                         MaxX="2400"

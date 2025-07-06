@@ -4,9 +4,6 @@ using SkiaSharp.Views.WPF;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,6 +17,8 @@ namespace EcgViewer.Controls
         private SKRect _lastWindow = SKRect.Empty;
         private SKMatrix _chartToDeviceMatrix, _deviceToChartMatrix;
         private int _lastValueCount;
+        private SKPoint _prevMouseDownPoint;
+
         public ChartControl()
         {
             InitializeComponent();
@@ -34,62 +33,6 @@ namespace EcgViewer.Controls
             canvasView.MouseLeftButtonDown += CanvasView_MouseLeftButtonDown;
             canvasView.MouseLeftButtonUp += CanvasView_MouseLeftButtonUp;
             canvasView.MouseMove += CanvasView_MouseMove;
-        }
-
-        private void CanvasView_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            _prevMouseDownPoint = default;
-        }
-
-        private SKPoint _prevMouseDownPoint;
-
-        private void CanvasView_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton is MouseButtonState.Pressed)
-            {
-                // Single-finger drag
-                if (_prevMouseDownPoint != default)
-                {
-                    float xOffset = -MinX * XScale + 0;
-                    float yOffset = -MinY * -YScale + canvasView.CanvasSize.Height;
-
-                    var chartToDeviceMatrix = SKMatrix.CreateScaleTranslation(XScale, -YScale, xOffset, yOffset);
-                    chartToDeviceMatrix.TryInvert(out var deviceToChartMatrix);
-
-                    if (StopTrackingOnDrag)
-                    {
-                        TimeMode = TimeModes.Pinned;
-                    }
-
-                    SKPoint mouseLocation = e.GetPosition(this).ToSKPoint();
-                    SKPoint point = deviceToChartMatrix.MapPoint(mouseLocation);
-                    SKPoint prevPoint = deviceToChartMatrix.MapPoint(_prevMouseDownPoint);
-
-                    var xDiff = point.X - prevPoint.X;
-                    var yDiff = point.Y - prevPoint.Y;
-
-                    if (MinX - xDiff >= XAxis.Minimum && MaxX - xDiff <= XAxis.Maximum)
-                    {
-                        MinX -= xDiff;
-                        MaxX -= xDiff;
-                    }
-
-                    if (MinY - yDiff >= YAxis.Minimum && MaxY - yDiff <= YAxis.Maximum)
-                    {
-                        MinY -= yDiff;
-                        MaxY -= yDiff;
-                    }
-
-                    canvasView.InvalidateVisual();
-
-                    _prevMouseDownPoint = mouseLocation;
-                }
-            }
-        }
-
-        private void CanvasView_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _prevMouseDownPoint = e.GetPosition(this).ToSKPoint();
         }
 
         private void ChartControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -314,6 +257,29 @@ namespace EcgViewer.Controls
         public float FadeOutEnd => XRange * 0.9f;
         public float FadeOutLength => FadeOutEnd - FadeOutStart;
 
+        #region Line
+
+        public int StrokeWidth
+        {
+            get { return (int)GetValue(StrokeWidthProperty); }
+            set { SetValue(StrokeWidthProperty, value); }
+        }
+        
+        public static readonly DependencyProperty StrokeWidthProperty =
+            DependencyProperty.Register("StrokeWidth", typeof(int), typeof(ChartControl), new PropertyMetadata(2));
+
+
+        public SKColor StrokeColor
+        {
+            get { return (SKColor)GetValue(StrokeColorProperty); }
+            set { SetValue(StrokeColorProperty, value); }
+        }
+        
+        public static readonly DependencyProperty StrokeColorProperty =
+            DependencyProperty.Register("StrokeColor", typeof(SKColor), typeof(ChartControl), new PropertyMetadata(SKColors.Black));
+
+
+        #endregion
 
         #region Grid
         public bool ShowGrid
@@ -781,8 +747,8 @@ namespace EcgViewer.Controls
             using (SKPaint paint = new SKPaint())
             {
                 paint.Style = SKPaintStyle.Stroke;
-                paint.Color = SKColors.Black;
-                paint.StrokeWidth = 3;
+                paint.Color = StrokeColor;
+                paint.StrokeWidth = StrokeWidth;
 
                 int x0 = (int)Math.Max(Math.Floor(minX + xOffset), 0);
                 int xEnd = (int)Math.Min(Math.Ceiling(maxX), numberOfValues - 1);
@@ -948,10 +914,6 @@ namespace EcgViewer.Controls
 
             SKPoint pivotPoint = e.GetPosition(this).ToSKPoint();
 
-            //float scaleToInitialX = Math.Abs(newVector.X / _initialScaleVec.X);
-            //float scaleToInitialY = Math.Abs(newVector.Y / _initialScaleVec.Y);
-
-            
             // Scaling factors are ratios of those
             float scaleX = 1;
             float scaleY = 1;
@@ -966,50 +928,13 @@ namespace EcgViewer.Controls
                     scaleY = deltaFloat;
                     break;
                 case ZoomModes.Both:
-
-                    scaleX = deltaFloat; //Map(Math.Max(0, 50 - Math.Abs(oldVector.X)), 50, 0, 1, newVector.X / oldVector.X);
-                                                        //translationMatrix = SKMatrix.CreateTranslation(translation.X, 0);
-
-                    scaleY = deltaFloat;
-                    //translationMatrix = SKMatrix.CreateTranslation(translation.X, translation.Y);
-                    break;
                 case ZoomModes.BothKeepAspectRatio:
                     scaleX = scaleY = deltaFloat;
-                    //scaleToInitialX = scaleToInitialY = Math.Abs(newVector.Length / _initialScaleVec.Length);
                     break;
                 case ZoomModes.None:
                 default:
                     break;
             }
-
-            //// Constraint scale to Max / Min zoom levels
-
-            //if (scaleToInitialY <= MaxZoom || scaleToInitialY >= MinZoom || Math.Abs(1 - scaleY) < ZoomThreshold)
-            //{
-            //    scaleY = 1;
-            //}
-            //else if (scaleToInitialY < 1)
-            //{
-            //    scaleY = Map(scaleToInitialY, 1, MaxZoom, scaleY, 1);
-            //    //scaleY += (1 - scaleToInitialY) * (1 - scaleY);
-            //}
-            //else if (scaleToInitialY > 1)
-            //{
-            //    scaleY = Map(scaleToInitialY, 1, MinZoom, scaleY, 1);
-            //}
-
-            //if (scaleToInitialX <= MaxZoom || scaleToInitialX >= MinZoom || Math.Abs(1 - scaleX) < ZoomThreshold)
-            //{
-            //    scaleX = 1;
-            //}
-            //else if (scaleToInitialX < 1)
-            //{
-            //    scaleX = Map(scaleToInitialX, 1, MaxZoom, scaleX, 1);
-            //}
-            //else if (scaleToInitialX > 1)
-            //{
-            //    scaleX = Map(scaleToInitialX, 1, MinZoom, scaleX, 1);
-            //}
 
             if (!float.IsNaN(scaleX) && !float.IsInfinity(scaleX) &&
                 !float.IsNaN(scaleY) && !float.IsInfinity(scaleY) &&
@@ -1098,6 +1023,61 @@ namespace EcgViewer.Controls
                 YScale *= scaleY;
             }
         }
+
+        private void CanvasView_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton is MouseButtonState.Pressed)
+            {
+                // Single-finger drag
+                if (_prevMouseDownPoint != default)
+                {
+                    float xOffset = -MinX * XScale + 0;
+                    float yOffset = -MinY * -YScale + canvasView.CanvasSize.Height;
+
+                    var chartToDeviceMatrix = SKMatrix.CreateScaleTranslation(XScale, -YScale, xOffset, yOffset);
+                    chartToDeviceMatrix.TryInvert(out var deviceToChartMatrix);
+
+                    if (StopTrackingOnDrag)
+                    {
+                        TimeMode = TimeModes.Pinned;
+                    }
+
+                    SKPoint mouseLocation = e.GetPosition(this).ToSKPoint();
+                    SKPoint point = deviceToChartMatrix.MapPoint(mouseLocation);
+                    SKPoint prevPoint = deviceToChartMatrix.MapPoint(_prevMouseDownPoint);
+
+                    var xDiff = point.X - prevPoint.X;
+                    var yDiff = point.Y - prevPoint.Y;
+
+                    if (MinX - xDiff >= XAxis.Minimum && MaxX - xDiff <= XAxis.Maximum)
+                    {
+                        MinX -= xDiff;
+                        MaxX -= xDiff;
+                    }
+
+                    if (MinY - yDiff >= YAxis.Minimum && MaxY - yDiff <= YAxis.Maximum)
+                    {
+                        MinY -= yDiff;
+                        MaxY -= yDiff;
+                    }
+
+                    canvasView.InvalidateVisual();
+
+                    _prevMouseDownPoint = mouseLocation;
+                }
+            }
+        }
+
+        private void CanvasView_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _prevMouseDownPoint = e.GetPosition(this).ToSKPoint();
+        }
+
+        private void CanvasView_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _prevMouseDownPoint = default;
+        }
+
 
         /// <summary>
         /// 
