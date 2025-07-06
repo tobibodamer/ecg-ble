@@ -79,6 +79,8 @@ namespace EcgBLEApp.Views
                     continue;
                 }
 
+                int valuesCount = Values.Count;
+
                 if (Values.Count > MaxX)
                 {
                     int newValuesCount = Math.Max(0, Values.Count - _lastValueCount);
@@ -94,8 +96,8 @@ namespace EcgBLEApp.Views
                             break;
                         case TimeModes.Reset:
                             _lastWindow = new SKRect(MinX, MinY, MaxX, MaxY);
-                            MaxX = Values.Count + XRange;
-                            MinX = Values.Count;
+                            MaxX = valuesCount + XRange;
+                            MinX = valuesCount;
                             break;
                         case TimeModes.Pinned:
                         default:
@@ -333,6 +335,28 @@ namespace EcgBLEApp.Views
         #endregion        
 
         #region Scaling / Range
+
+        public void SkipTo(float xValue)
+        {
+            float xRange = XRange;
+
+            MinX = xValue;
+            MaxX = xValue + xRange;
+        }
+
+        public void SkipToEnd()
+        {
+            float xRange = XRange;
+            int length = Values.Count;
+
+            MinX = Math.Max(XAxis.Minimum, length - xRange);
+            MaxX = length;
+        }
+        public void ResetToEnd()
+        {
+            MinX = Values.Count;
+            MaxX = Values.Count + XRange;
+        }
 
         /// <summary>
         /// Updates the min and max values to achieve a new range, by maintaining the center position of the axis.

@@ -53,5 +53,11 @@ namespace EcgBLEApp.Views
             ChartControl.XScale = 70 / (ViewModel.PollingRate * 0.2f); // 70px / 0.2s
             ChartControl.YScale = 70 / 0.5f; // 70px / 0.5mV
         }
+
+        private void SkipToEndButton_Clicked(object sender, EventArgs e)
+        {
+            ChartControl.TimeMode = ChartControl.TimeModes.Scrolling;
+            ChartControl.SkipToEnd();
+        }
     }
 }

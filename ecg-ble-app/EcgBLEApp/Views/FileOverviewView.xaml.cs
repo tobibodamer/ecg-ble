@@ -21,8 +21,6 @@ namespace EcgBLEApp.Views
         public FileOverviewView()
         {
             InitializeComponent();
-
-            ViewModel.RefreshFilesCommand.Execute(null);
         }
 
         public FileOverviewViewModel ViewModel => BindingContext as FileOverviewViewModel;
@@ -30,11 +28,23 @@ namespace EcgBLEApp.Views
         protected override void OnAppearing()
         {
             base.OnAppearing();
+
+            var syncContext = SynchronizationContext.Current;
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(300);
+
+                syncContext.Post(delegate
+                {
+                    ViewModel.RefreshFilesCommand.Execute(null);
+                }, null);
+            });
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            
+
         }
 
         private void ViewCell_Tapped(object sender, EventArgs e)
